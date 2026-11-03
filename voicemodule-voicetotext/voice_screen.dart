@@ -47,7 +47,7 @@ class VoiceScreen extends StatefulWidget {
 }
 
 class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStateMixin {
-  String _lang = 'mr'; // 'mr' or 'en'
+  String _lang = 'as'; // Default to Assamese (most spoken native language in Northeast India)
   String _activeTab = 'record'; // 'record' | 'review' | 'doctor' | 'cases'
 
   // Controllers
@@ -98,8 +98,8 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
   void initState() {
     super.initState();
 
-    _villageController = TextEditingController(text: 'पिंपरी (Pimpri)');
-    _pseudoIdController = TextEditingController(text: 'P-PMP-104');
+    _villageController = TextEditingController(text: 'মাজুলী (Majuli)');
+    _pseudoIdController = TextEditingController(text: 'AS-MAJ-104');
     _typedTextController = TextEditingController();
     _doctorTranscriptController = TextEditingController();
     _assessmentController = TextEditingController();
@@ -119,13 +119,13 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
     );
 
     // Initial extraction from sample
-    _currentExtraction = LocalExtractor.extract(sampleReports[0].transcript);
+    _currentExtraction = LocalExtractor.extract(sampleReports[0].transcript, lang: _lang);
     _syncReviewControllers();
 
     // Initial doctor consult
     final initialDocText = sampleReports[1].transcript;
     _doctorTranscriptController.text = initialDocText;
-    _doctorResult = buildSimulatedDoctorConsult(initialDocText, mr: _lang == 'mr');
+    _doctorResult = buildSimulatedDoctorConsult(initialDocText, mr: _lang == 'mr', lang: _lang);
     _assessmentController.text = _doctorResult.suggestedAssessment ?? '';
     _planController.text = _doctorResult.suggestedPlan ?? '';
 
@@ -211,6 +211,142 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
 
   bool get _isMr => _lang == 'mr';
 
+  NortheastLanguage get _currentLanguage => kSupportedLanguages.firstWhere(
+    (l) => l.code == _lang,
+    orElse: () => kSupportedLanguages.first,
+  );
+
+  void _changeLanguage(String newCode) {
+    if (_lang == newCode) return;
+    setState(() {
+      _lang = newCode;
+      if (_doctorTranscriptController.text.isNotEmpty) {
+        _doctorResult = buildSimulatedDoctorConsult(
+          _doctorTranscriptController.text,
+          mr: _isMr,
+          lang: _lang,
+        );
+        _assessmentController.text = _doctorResult.suggestedAssessment ?? '';
+        _planController.text = _doctorResult.suggestedPlan ?? '';
+      }
+    });
+    _showToast('${_currentLanguage.flag} ${_currentLanguage.nativeName} (${_currentLanguage.name}) - ${_currentLanguage.region}');
+  }
+
+  List<PopupMenuEntry<String>> _buildLanguageMenuItems() {
+    return [
+      PopupMenuItem<String>(
+        enabled: false,
+        height: 36,
+        child: Container(
+          padding: const EdgeInsets.only(bottom: 4),
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.translate_rounded, size: 15, color: Color(0xFF0284C7)),
+              SizedBox(width: 6),
+              Text(
+                'NORTHEAST INDIA LANGUAGES',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.8,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      ...kSupportedLanguages.map((l) {
+        final isSelected = _lang == l.code;
+        return PopupMenuItem<String>(
+          value: l.code,
+          height: 54,
+          child: Row(
+            children: [
+              Text(l.flag, style: const TextStyle(fontSize: 20)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          l.nativeName,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                            color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          '(${l.name})',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isSelected ? const Color(0xFF0369A1) : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      l.region,
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected)
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: Color(0xFF0284C7),
+                  size: 18,
+                ),
+            ],
+          ),
+        );
+      }),
+    ];
+  }
+
+  Widget _buildQuickLangChip(String code, String label) {
+    final isSelected = _lang == code;
+    return InkWell(
+      onTap: () => _changeLanguage(code),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF0284C7) : Colors.white.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? Colors.white : Colors.white24,
+            width: isSelected ? 1.2 : 0.8,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.88),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _loadSavedCases() async {
     final list = await LocalStore.all();
     if (mounted) {
@@ -281,7 +417,7 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
     }
 
     final danger = computeDangerSigns(_currentExtraction);
-    final risk = computeWaterRisk(_currentExtraction, mr: _isMr);
+    final risk = computeWaterRisk(_currentExtraction, mr: _isMr, lang: _lang);
 
     final savedRow = await LocalStore.saveFromExtraction(
       _currentExtraction,
@@ -307,7 +443,7 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
     setState(() {
       _activeConsultCase = fromCase;
       _doctorTranscriptController.text = transcriptText;
-      _doctorResult = buildSimulatedDoctorConsult(transcriptText, mr: _isMr);
+      _doctorResult = buildSimulatedDoctorConsult(transcriptText, mr: _isMr, lang: _lang);
       _assessmentController.text = _doctorResult.suggestedAssessment ?? '';
       _planController.text = _doctorResult.suggestedPlan ?? '';
       _activeTab = 'doctor';
@@ -340,7 +476,7 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
     }
 
     final danger = computeDangerSigns(_currentExtraction);
-    final risk = computeWaterRisk(_currentExtraction, mr: _isMr);
+    final risk = computeWaterRisk(_currentExtraction, mr: _isMr, lang: _lang);
 
     final savedRow = await LocalStore.saveFromExtraction(
       _currentExtraction,
@@ -492,7 +628,7 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
                           if (danger.isNotEmpty) ...[
                             const SizedBox(height: 6),
                             Text(
-                              '⚠️ ${_isMr ? "धोक्याची चिन्हे: " : "Danger: "}${danger.map((d) => dangerLabels[d]?[_lang] ?? d).join(", ")}',
+                              '⚠️ ${_isMr ? "धोक्याची चिन्हे: " : "Danger: "}${danger.map((d) => getLocalizedDanger(d, _lang)).join(", ")}',
                               style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFFDC2626)),
                             ),
                           ],
@@ -699,9 +835,9 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
     bool startedReal = false;
     if (_speechEnabled) {
       try {
-        // Explicitly set language: 'mr_IN' for Marathi, 'en_IN' for English
-        final String selectedLocale = _isMr ? 'mr_IN' : 'en_IN';
-        debugPrint('STT starting with locale: $selectedLocale');
+        // Explicitly set language for Northeast India / ASHA worker speech recognition
+        final String selectedLocale = _currentLanguage.localeId;
+        debugPrint('STT starting with locale: $selectedLocale (${_currentLanguage.name})');
 
         // Note: speech_to_text listen returns Future<void> (implicit null)
         await _speech.listen(
@@ -777,11 +913,12 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
         clean,
         villageHint: _villageController.text.trim(),
         mr: _isMr,
+        lang: _lang,
       );
       _showToast(_isMr ? '✨ Gemini AI द्वारे अचूक तपासणी पूर्ण!' : '✨ Verified with Gemini AI (100% accurate)!');
     } catch (e) {
       debugPrint('Gemini extraction error: $e, fallback to LocalExtractor');
-      extraction = LocalExtractor.extract(clean);
+      extraction = LocalExtractor.extract(clean, lang: _lang);
       _showToast(_isMr ? 'स्थानिक विश्लेषणाने नोंद पूर्ण' : 'Processed via local rules');
     } finally {
       if (mounted) {
@@ -1004,29 +1141,29 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
 
         const SizedBox(width: 6),
 
-        // Language Toggle Pill
-        InkWell(
-          onTap: () {
-            setState(() {
-              _lang = _isMr ? 'en' : 'mr';
-              if (_doctorTranscriptController.text.isNotEmpty) {
-                _doctorResult = buildSimulatedDoctorConsult(_doctorTranscriptController.text, mr: _lang == 'mr');
-                _assessmentController.text = _doctorResult.suggestedAssessment ?? '';
-                _planController.text = _doctorResult.suggestedPlan ?? '';
-              }
-            });
-          },
-          borderRadius: BorderRadius.circular(10),
+        // Northeast India Language Drop Down Menu for ASHA Workers
+        PopupMenuButton<String>(
+          tooltip: 'Select Language / ভাষা বাছক',
+          initialValue: _lang,
+          onSelected: (code) => _changeLanguage(code),
+          offset: const Offset(0, 42),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: Color(0xFFBAE6FD)),
+          ),
+          color: Colors.white,
+          elevation: 6,
+          itemBuilder: (context) => _buildLanguageMenuItems(),
           child: Container(
             height: 36,
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: const Color(0xFFBAE6FD), width: 1.2),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: const Color(0xFF0284C7).withValues(alpha: 0.08),
                   blurRadius: 4,
                   offset: const Offset(0, 1),
                 ),
@@ -1036,17 +1173,22 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _isMr ? 'मराठी' : 'English',
+                  _currentLanguage.flag,
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  _currentLanguage.nativeName,
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F1E36),
+                    color: Color(0xFF0369A1),
                   ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 3),
                 const Icon(
-                  Icons.swap_horiz_rounded,
-                  size: 16,
+                  Icons.arrow_drop_down_rounded,
+                  size: 20,
                   color: Color(0xFF0284C7),
                 ),
               ],
@@ -1366,9 +1508,7 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
               ),
               const SizedBox(height: 6),
               Text(
-                _isMr
-                    ? 'उदा. “रुग्णाचे नाव राकेश, वय ३२, पिंपरी गाव. ३ दिवसांपासून जुलाब आणि उलट्या आहेत.”'
-                    : 'e.g. “Patient Rakesh, age 32, Pimpri village. Diarrhoea and vomiting for 3 days.”',
+                _currentLanguage.sampleHint,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Color(0xFFBAE6FD),
@@ -1378,74 +1518,62 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
 
               const SizedBox(height: 10),
 
-              // Spoken Language Selector Pill
-              Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white24),
+              // Spoken Language Selector & Drop Down Menu for ASHA Workers
+              PopupMenuButton<String>(
+                tooltip: 'Select Spoken Language for AI Voice / ভাষা নিৰ্বাচন',
+                initialValue: _lang,
+                onSelected: (code) => _changeLanguage(code),
+                offset: const Offset(0, 38),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: Color(0xFFBAE6FD)),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    InkWell(
-                      onTap: () {
-                        if (!_isMr) setState(() => _lang = 'mr');
-                      },
-                      borderRadius: BorderRadius.circular(9),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: _isMr ? const Color(0xFF0284C7) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(9),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('🗣️ ', style: TextStyle(fontSize: 11)),
-                            Text(
-                              'मराठी',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: _isMr ? FontWeight.bold : FontWeight.w500,
-                                color: _isMr ? Colors.white : Colors.white70,
-                              ),
-                            ),
-                          ],
+                color: Colors.white,
+                elevation: 10,
+                itemBuilder: (context) => _buildLanguageMenuItems(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 1.2),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('🗣️ ', style: TextStyle(fontSize: 13)),
+                      Text(
+                        '${_currentLanguage.flag} ${_currentLanguage.nativeName} (${_currentLanguage.name})',
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                    InkWell(
-                      onTap: () {
-                        if (_isMr) setState(() => _lang = 'en');
-                      },
-                      borderRadius: BorderRadius.circular(9),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: !_isMr ? const Color(0xFF0284C7) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(9),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('🗣️ ', style: TextStyle(fontSize: 11)),
-                            Text(
-                              'English',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: !_isMr ? FontWeight.bold : FontWeight.w500,
-                                color: !_isMr ? Colors.white : Colors.white70,
-                              ),
-                            ),
-                          ],
-                        ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.arrow_drop_down_rounded,
+                        color: Colors.white,
+                        size: 22,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // Quick-switch language chips for top Northeast languages
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  _buildQuickLangChip('as', '🌾 অসমীয়া'),
+                  _buildQuickLangChip('bn', '🌊 বাংলা'),
+                  _buildQuickLangChip('hi', '🇮🇳 हिंदी'),
+                  _buildQuickLangChip('en', '🇬🇧 English'),
+                ],
               ),
 
               if (_isExtractingAI) ...[
@@ -1849,7 +1977,7 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
   // ==========================================
   Widget _buildReviewTab() {
     final danger = computeDangerSigns(_currentExtraction);
-    final risk = computeWaterRisk(_currentExtraction, mr: _isMr);
+    final risk = computeWaterRisk(_currentExtraction, mr: _isMr, lang: _lang);
 
     const waterSources = [
       {'id': 'well', 'labelMr': 'विहीर (Well)', 'labelEn': 'Open Well'},
@@ -2014,7 +2142,7 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        danger.map((d) => dangerLabels[d]?[_lang] ?? d).join('  •  '),
+                        danger.map((d) => getLocalizedDanger(d, _lang)).join('  •  '),
                         style: const TextStyle(color: Color(0xFFFEE2E2), fontSize: 11.5),
                       ),
                     ],
@@ -2252,7 +2380,7 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
 
                   return FilterChip(
                     label: Text(
-                      symptomLabels[sym]?[_lang] ?? sym,
+                      getLocalizedSymptom(sym, _lang),
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -2586,7 +2714,7 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
                     onPressed: () {
                       _doctorTranscriptController.text = p['text']!;
                       setState(() {
-                        _doctorResult = buildSimulatedDoctorConsult(p['text']!, mr: _isMr);
+                        _doctorResult = buildSimulatedDoctorConsult(p['text']!, mr: _isMr, lang: _lang);
                         _assessmentController.text = _doctorResult.suggestedAssessment ?? '';
                         _planController.text = _doctorResult.suggestedPlan ?? '';
                       });
@@ -2623,7 +2751,7 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
                       final t = _doctorTranscriptController.text.trim();
                       if (t.isEmpty) return;
                       setState(() {
-                        _doctorResult = buildSimulatedDoctorConsult(t, mr: _isMr);
+                        _doctorResult = buildSimulatedDoctorConsult(t, mr: _isMr, lang: _lang);
                         _assessmentController.text = _doctorResult.suggestedAssessment ?? '';
                         _planController.text = _doctorResult.suggestedPlan ?? '';
                       });
@@ -2677,7 +2805,7 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '${_isMr ? "धोक्याची चिन्हे: " : "Red Flags: "}${_doctorResult.redFlags.map((f) => dangerLabels[f]?[_lang] ?? f).join('  •  ')}',
+                    '${_isMr ? "धोक्याची चिन्हे: " : "Red Flags: "}${_doctorResult.redFlags.map((f) => getLocalizedDanger(f, _lang)).join('  •  ')}',
                     style: const TextStyle(color: Color(0xFF9F1239), fontSize: 11.5, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -3222,7 +3350,7 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        '⚠️ ${_isMr ? "धोक्याची चिन्हे: " : "Danger: "}${r.dangerSigns.map((d) => dangerLabels[d]?[_lang] ?? d).join('  •  ')}',
+                        '⚠️ ${_isMr ? "धोक्याची चिन्हे: " : "Danger: "}${r.dangerSigns.map((d) => getLocalizedDanger(d, _lang)).join('  •  ')}',
                         style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFFE11D48)),
                       ),
                     ),
@@ -3306,7 +3434,7 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
 
                   const SizedBox(height: 8),
                   Text(
-                    '${_isMr ? "लक्षणे: " : "Symptoms: "}${r.symptoms.map((s) => symptomLabels[s]?[_lang] ?? s).join(", ")}',
+                    '${_isMr ? "लक्षणे: " : "Symptoms: "}${r.symptoms.map((s) => getLocalizedSymptom(s, _lang)).join(", ")}',
                     style: const TextStyle(fontSize: 11.5, color: Color(0xFF334155)),
                   ),
 

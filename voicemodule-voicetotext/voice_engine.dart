@@ -559,36 +559,281 @@ class SignedConsultNote {
   }
 }
 
-// --- LABELS & CONSTANTS ---
+// --- NORTHEAST INDIA LANGUAGES & CONSTANTS ---
+
+class NortheastLanguage {
+  final String code;
+  final String name;
+  final String nativeName;
+  final String region;
+  final String localeId;
+  final String flag;
+  final String sampleHint;
+
+  const NortheastLanguage({
+    required this.code,
+    required this.name,
+    required this.nativeName,
+    required this.region,
+    required this.localeId,
+    required this.flag,
+    required this.sampleHint,
+  });
+}
+
+const List<NortheastLanguage> kSupportedLanguages = [
+  NortheastLanguage(
+    code: 'as',
+    name: 'Assamese',
+    nativeName: 'অসমীয়া',
+    region: 'Assam · Most Spoken Lingua Franca in NE (15M+ speakers)',
+    localeId: 'as_IN',
+    flag: '🌾',
+    sampleHint: 'উদাহৰণ: "ৰোগী ৰাহুল বৰা, বয়স ২৫, মাজুলী গাঁও। দুদিন ধৰি পেটৰ বিষ আৰু পাতলা শৌচ হৈছে।"',
+  ),
+  NortheastLanguage(
+    code: 'bn',
+    name: 'Bengali',
+    nativeName: 'বাংলা',
+    region: 'Tripura, Assam (Barak Valley) & Meghalaya (Highest Overall)',
+    localeId: 'bn_IN',
+    flag: '🌊',
+    sampleHint: 'উদা: "রোগীর নাম অনিতা দাস, বয়স ৩২, ধর্মনগর গ্রাম। ৩ দিন ধরে পাতলা পায়খানা ও বমি।"',
+  ),
+  NortheastLanguage(
+    code: 'hi',
+    name: 'Hindi',
+    nativeName: 'हिंदी',
+    region: 'Arunachal Pradesh & NE Link Language',
+    localeId: 'hi_IN',
+    flag: '🇮🇳',
+    sampleHint: 'उदा: "मरीज का नाम राकेश, उम्र 32, पासीघाट गांव। 3 दिन से उल्टी और दस्त हैं।"',
+  ),
+  NortheastLanguage(
+    code: 'en',
+    name: 'English',
+    nativeName: 'English',
+    region: 'Official Link: Nagaland, Meghalaya, Mizoram',
+    localeId: 'en_IN',
+    flag: '🇬🇧',
+    sampleHint: 'e.g. "Patient Rakesh, age 32, Kohima village. Diarrhoea and vomiting for 3 days."',
+  ),
+  NortheastLanguage(
+    code: 'mni',
+    name: 'Manipuri (Meitei)',
+    nativeName: 'মৈতৈলোন্',
+    region: 'Manipur State Official Language',
+    localeId: 'mni_IN',
+    flag: '🏔️',
+    sampleHint: 'মৈতৈলোনদা রিকোর্দিং তৌবীয়ু (Speak in Manipuri)',
+  ),
+  NortheastLanguage(
+    code: 'brx',
+    name: 'Bodo',
+    nativeName: 'बर\'',
+    region: 'Bodoland Territorial Region (Assam)',
+    localeId: 'brx_IN',
+    flag: '🌿',
+    sampleHint: 'बर\' रावजों बाहाय (Speak in Bodo)',
+  ),
+  NortheastLanguage(
+    code: 'lus',
+    name: 'Mizo',
+    nativeName: 'Mizo ṭawng',
+    region: 'Mizoram Official Language',
+    localeId: 'lus_IN',
+    flag: '⛰️',
+    sampleHint: 'Mizo ṭawngin sawi rawh (Speak in Mizo)',
+  ),
+  NortheastLanguage(
+    code: 'mr',
+    name: 'Marathi',
+    nativeName: 'मराठी',
+    region: 'Western India (Compatibility)',
+    localeId: 'mr_IN',
+    flag: '🚩',
+    sampleHint: 'उदा. "रुग्णाचे नाव राकेश, वय ३२, पिंपरी गाव. ३ दिवसांपासून जुलाब आणि उलट्या आहेत."',
+  ),
+];
 
 const Map<String, Map<String, String>> symptomLabels = {
-  'diarrhoea': {'mr': 'जुलाब', 'en': 'Diarrhoea'},
-  'vomiting': {'mr': 'उलट्या', 'en': 'Vomiting'},
-  'typhoid': {'mr': 'टायफॉइड', 'en': 'Typhoid'},
-  'jaundice': {'mr': 'कावीळ', 'en': 'Jaundice'},
-  'cholera': {'mr': 'कॉलरा / पटकी', 'en': 'Cholera / Patki'},
-  'gastro': {'mr': 'गॅस्ट्रो', 'en': 'Gastroenteritis'},
-  'abdominal_pain': {'mr': 'पोटदुखी', 'en': 'Abdominal pain'},
-  'weakness': {'mr': 'अशक्तपणा', 'en': 'Weakness'},
-  'thirst': {'mr': 'तहान', 'en': 'Excessive thirst'},
-  'sunken_eyes': {'mr': 'डोळे खोल', 'en': 'Sunken eyes'},
-  'blood_in_stool': {'mr': 'शौचात रक्त', 'en': 'Blood in stool'},
-  'fever': {'mr': 'ताप', 'en': 'Fever'},
+  'diarrhoea': {
+    'as': 'পাতলা শৌচ / ডায়েৰিয়া',
+    'bn': 'পাতলা পায়খানা / ডায়রিয়া',
+    'hi': 'दस्त / डायरिया',
+    'en': 'Diarrhoea',
+    'mr': 'जुलाब',
+  },
+  'vomiting': {
+    'as': 'বমি / ওকালি',
+    'bn': 'বমি',
+    'hi': 'उल्टी',
+    'en': 'Vomiting',
+    'mr': 'उलट्या',
+  },
+  'typhoid': {
+    'as': 'টাইফয়েড',
+    'bn': 'টাইফয়েড',
+    'hi': 'टाइफाइड',
+    'en': 'Typhoid',
+    'mr': 'टायफॉइड',
+  },
+  'jaundice': {
+    'as': 'জণ্ডিচ',
+    'bn': 'জন্ডিস',
+    'hi': 'पीलिया',
+    'en': 'Jaundice',
+    'mr': 'कावीळ',
+  },
+  'cholera': {
+    'as': 'কলেৰা / পটকী',
+    'bn': 'কলেরা',
+    'hi': 'हैजा / कॉलरा',
+    'en': 'Cholera',
+    'mr': 'कॉलरा / पटकी',
+  },
+  'gastro': {
+    'as': 'গেষ্ট্ৰো',
+    'bn': 'গ্যাস্ট্রো',
+    'hi': 'गैस्ट्रो',
+    'en': 'Gastroenteritis',
+    'mr': 'गॅस्ट्रो',
+  },
+  'abdominal_pain': {
+    'as': 'পেটৰ বিষ',
+    'bn': 'পেটে ব্যথা',
+    'hi': 'पेट दर्द',
+    'en': 'Abdominal pain',
+    'mr': 'पोटदुखी',
+  },
+  'weakness': {
+    'as': 'দুৰ্বলতা',
+    'bn': 'দুর্বলতা',
+    'hi': 'कमजोरी',
+    'en': 'Weakness',
+    'mr': 'अशक्तपणा',
+  },
+  'thirst': {
+    'as': 'অধিক পিয়াহ',
+    'bn': 'অতিরিক্ত তৃষ্ণা',
+    'hi': 'अत्यधिक प्यास',
+    'en': 'Excessive thirst',
+    'mr': 'तहान',
+  },
+  'sunken_eyes': {
+    'as': 'চকু সোমাই যোৱা',
+    'bn': 'চোখ বসে যাওয়া',
+    'hi': 'आँखें धँसना',
+    'en': 'Sunken eyes',
+    'mr': 'डोळे खोल',
+  },
+  'blood_in_stool': {
+    'as': 'শৌচত তেজ',
+    'bn': 'মলে রক্ত',
+    'hi': 'शौच में खून',
+    'en': 'Blood in stool',
+    'mr': 'शौचात रक्त',
+  },
+  'fever': {
+    'as': 'জ্বৰ',
+    'bn': 'জ্বর',
+    'hi': 'बुखार',
+    'en': 'Fever',
+    'mr': 'ताप',
+  },
 };
 
 const Map<String, Map<String, String>> dangerLabels = {
-  'sunken_eyes': {'mr': 'डोळे खोल गेले', 'en': 'Sunken eyes'},
-  'unable_to_drink': {'mr': 'पाणी पिऊ शकत नाही', 'en': 'Unable to drink fluids'},
-  'very_sleepy': {'mr': 'खूप सुस्त / झोपाळू', 'en': 'Lethargic / very sleepy'},
-  'lethargy': {'mr': 'खूप सुस्त / झोपाळू', 'en': 'Lethargic / very sleepy'},
-  'blood_in_stool': {'mr': 'शौचात रक्त', 'en': 'Blood in stool (Dysentery)'},
-  'repeated_vomiting': {'mr': 'वारंवार उलट्या (≥ ३)', 'en': 'Repeated vomiting (≥ 3)'},
-  'infant': {'mr': 'लहान बाळ (< १ वर्ष)', 'en': 'Infant (< 1 year)'},
-  'very_young_child': {'mr': 'लहान बाळ (< १ वर्ष)', 'en': 'Infant (< 1 year)'},
-  'pregnancy': {'mr': 'गर्भवती महिला', 'en': 'Pregnant patient'},
-  'long_illness': {'mr': 'आजार जास्त दिवसांचा (≥ ७ दिवस)', 'en': 'Prolonged illness (≥ 7 days)'},
-  'long_duration': {'mr': 'आजार जास्त दिवसांचा (≥ ७ दिवस)', 'en': 'Prolonged illness (≥ 7 days)'},
+  'sunken_eyes': {
+    'as': 'চকু সোমাই গৈছে',
+    'bn': 'চোখ বসে গেছে',
+    'hi': 'आँखें धँस गईं',
+    'en': 'Sunken eyes',
+    'mr': 'डोळे खोल गेले',
+  },
+  'unable_to_drink': {
+    'as': 'পানী খাব পৰা নাই',
+    'bn': 'পানি খেতে পারছে না',
+    'hi': 'पानी नहीं पी पा रहा',
+    'en': 'Unable to drink fluids',
+    'mr': 'पाणी पिऊ शकत नाही',
+  },
+  'very_sleepy': {
+    'as': 'অতিশয় অচেতন / এলাহ',
+    'bn': 'অত্যন্ত নিস্তেজ / ঘুমন্ত',
+    'hi': 'बहुत सुस्त / अचेत',
+    'en': 'Lethargic / very sleepy',
+    'mr': 'खूप सुस्त / झोपाळू',
+  },
+  'lethargy': {
+    'as': 'অতিশয় অচেতন / এলাহ',
+    'bn': 'অত্যন্ত নিস্তেজ / ঘুমন্ত',
+    'hi': 'बहुत सुस्त / अचेत',
+    'en': 'Lethargic / very sleepy',
+    'mr': 'खूप सुस्त / झोपाळू',
+  },
+  'blood_in_stool': {
+    'as': 'শৌচত তেজ (ডিচেণ্ট্ৰী)',
+    'bn': 'মলে রক্ত (আমাশয়)',
+    'hi': 'शौच में खून (पेचिश)',
+    'en': 'Blood in stool (Dysentery)',
+    'mr': 'शौचात रक्त',
+  },
+  'repeated_vomiting': {
+    'as': 'বাৰে বাৰে বমি (≥ ৩ বাৰ)',
+    'bn': 'বারবার বমি (≥ ৩ বার)',
+    'hi': 'बार-बार उल्टी (≥ ३)',
+    'en': 'Repeated vomiting (≥ 3)',
+    'mr': 'वारंवार उलट्या (≥ ३)',
+  },
+  'infant': {
+    'as': 'কেঁচুৱা (< ১ বছৰ)',
+    'bn': 'শিশু (< ১ বছর)',
+    'hi': 'छोटा बच्चा (< १ वर्ष)',
+    'en': 'Infant (< 1 year)',
+    'mr': 'लहान बाळ (< १ वर्ष)',
+  },
+  'very_young_child': {
+    'as': 'কেঁচুৱা (< ১ বছৰ)',
+    'bn': 'শিশু (< ১ বছর)',
+    'hi': 'छोटा बच्चा (< १ वर्ष)',
+    'en': 'Infant (< 1 year)',
+    'mr': 'लहान बाळ (< १ वर्ष)',
+  },
+  'pregnancy': {
+    'as': 'গৰ্ভৱতী মহিলা',
+    'bn': 'গর্ভবতী নারী',
+    'hi': 'गर्भवती महिला',
+    'en': 'Pregnant patient',
+    'mr': 'गर्भवती महिला',
+  },
+  'long_illness': {
+    'as': 'দীৰ্ঘদিনীয়া ৰোগ (≥ ৭ দিন)',
+    'bn': 'দীর্ঘস্থায়ী অসুস্থতা (≥ ৭ দিন)',
+    'hi': 'लंबे समय से बीमारी (≥ ७ दिन)',
+    'en': 'Prolonged illness (≥ 7 days)',
+    'mr': 'आजार जास्त दिवसांचा (≥ ७ दिवस)',
+  },
+  'long_duration': {
+    'as': 'দীৰ্ঘদিনীয়া ৰোগ (≥ ৭ দিন)',
+    'bn': 'দীর্ঘস্থায়ী অসুস্থতা (≥ ৭ দিন)',
+    'hi': 'लंबे समय से बीमारी (≥ ७ दिन)',
+    'en': 'Prolonged illness (≥ 7 days)',
+    'mr': 'आजार जास्त दिवसांचा (≥ ७ दिवस)',
+  },
 };
+
+String getLocalizedSymptom(String key, String lang) {
+  final entry = symptomLabels[key];
+  if (entry == null) return key;
+  return entry[lang] ?? entry['en'] ?? key;
+}
+
+String getLocalizedDanger(String key, String lang) {
+  final entry = dangerLabels[key];
+  if (entry == null) return key;
+  return entry[lang] ?? entry['en'] ?? key;
+}
 
 class SampleReport {
   final String id;
@@ -598,6 +843,7 @@ class SampleReport {
   final String tagEn;
   final String severity; // 'mild' | 'danger' | 'warning' | 'cluster'
   final String transcript;
+  final String lang; // 'as' | 'bn' | 'hi' | 'en' | 'mr'
 
   const SampleReport({
     required this.id,
@@ -607,10 +853,55 @@ class SampleReport {
     required this.tagEn,
     required this.severity,
     required this.transcript,
+    this.lang = 'mr',
   });
 }
 
 const List<SampleReport> sampleReports = [
+  SampleReport(
+    id: 'as_majuli',
+    titleMr: 'মাজুলী ৰোগী পঞ্জীয়ন (ৰাহুল বৰা, অসম)',
+    titleEn: 'Majuli Patient Report (Rahul Bora, Assam)',
+    tagMr: 'পেটৰ বিষ · ২ দিন · নদীৰ পানী',
+    tagEn: 'Abdominal Pain · 2 Days · River Water',
+    severity: 'mild',
+    transcript:
+        'নাম ৰাহুল বৰা, বয়স ২৫, মাজুলী গাঁও। দুদিন ধৰি পেটৰ বিষ আৰু পাতলা শৌচ হৈছে, পানী পাঁচ বাৰ খায়, নদীৰ পানী ব্যৱহাৰ কৰে।',
+    lang: 'as',
+  ),
+  SampleReport(
+    id: 'bn_dharmanagar',
+    titleMr: 'ধর্মনগর জরুরি কেস (অনিতা দাস, ত্রিপুরা)',
+    titleEn: 'Urgent Case (Anita Das, Dharmanagar, Tripura)',
+    tagMr: 'মলে রক্ত · চোখ বসে গেছে · পানি খেতে পারে না',
+    tagEn: 'Blood in Stool · Sunken Eyes · Unable to Drink',
+    severity: 'danger',
+    transcript:
+        'রোগীর নাম অনিতা দাস, বয়স চার, ধর্মনগর গ্রাম। দুই দিন ধরে পাতলা পায়খানা, মলে রক্ত, চোখ বসে গেছে, পানি খেতে পারছে না।',
+    lang: 'bn',
+  ),
+  SampleReport(
+    id: 'hi_pasighat',
+    titleMr: 'पासीघाट जलजन्य क्लस्टर (तेनजिंग, अरुणाचल प्रदेश)',
+    titleEn: 'Water Cluster (Tenzing, Pasighat, Arunachal)',
+    tagMr: 'कॉलरा लक्षण · ८ बार दस्त · घर में अन्य बीमार',
+    tagEn: 'Suspected Cholera · 8 Stools/Day · Household Cluster',
+    severity: 'cluster',
+    transcript:
+        'मरीज का नाम तेनजिंग, उम्र अड़तीस, पासीघाट गांव। दो दिन से आठ बार पतले दस्त और चार बार उल्टी हो रही है। बहुत प्यास है और कमजोरी है। नदी का पानी स्रोत है, घर में अन्य लोग भी बीमार हैं, ओआरएस दिया है।',
+    lang: 'hi',
+  ),
+  SampleReport(
+    id: 'en_kohima',
+    titleMr: 'Kohima Outbreak Case (Kevi Angami, Nagaland)',
+    titleEn: 'Kohima Outbreak Case (Kevi Angami, Nagaland)',
+    tagMr: 'Diarrhoea & Vomiting · 3 Days · Stream Water',
+    tagEn: 'Diarrhoea & Vomiting · 3 Days · Stream Water',
+    severity: 'mild',
+    transcript:
+        'Patient name Kevi Angami, age thirty-four, Kohima village. Having loose motions and vomiting for three days. Drinks untreated stream water, feels very weak.',
+    lang: 'en',
+  ),
   SampleReport(
     id: 'omkar',
     titleMr: 'रुग्ण नोंद (ओमकार कांबळे, वाघोली गाव)',
@@ -667,20 +958,35 @@ const List<SampleReport> sampleReports = [
 
 class LocalExtractor {
   static const Map<String, int> numMap = {
-    'शून्य': 0, 'एक': 1, 'दोन': 2, 'तीन': 3, 'चार': 4,
-    'पाच': 5, 'सहा': 6, 'सात': 7, 'आठ': 8, 'नऊ': 9, 'दहा': 10,
-    'बारा': 12, 'पंधरा': 15, 'वीस': 20, 'पंचवीस': 25, 'तीस': 30,
-    'बत्तीस': 32, 'पस्तीस': 35, 'चाळीस': 40, 'पंचेचाळीस': 45,
-    'पन्नास': 50, 'साठ': 60,
-    'ek': 1, 'don': 2, 'teen': 3, 'char': 4, 'paach': 5, 'pach': 5,
-    'saha': 6, 'saat': 7, 'aath': 8, 'nau': 9, 'daha': 10,
+    // Marathi / Hindi Devanagari words
+    'शून्य': 0, 'एक': 1, 'दोन': 2, 'दो': 2, 'तीन': 3, 'चार': 4,
+    'पाच': 5, 'पाँच': 5, 'सहा': 6, 'छह': 6, 'सात': 7, 'आठ': 8, 'नऊ': 9, 'नौ': 9, 'दहा': 10, 'दस': 10,
+    'बारा': 12, 'बारह': 12, 'पंधरा': 15, 'पंद्रह': 15, 'वीस': 20, 'बीस': 20, 'पंचवीस': 25, 'पच्चीस': 25,
+    'तीस': 30, 'बत्तीस': 32, 'पस्तीस': 35, 'चाळीस': 40, 'चालीस': 40, 'पंचेचाळीस': 45,
+    'पन्नास': 50, 'पचास': 50, 'साठ': 60,
+
+    // Assamese / Bengali Bengali-Assamese Script words
+    'শূন্য': 0, 'এক': 1, 'দুই': 2, 'তিনি': 3, 'তিন': 3, 'চাৰি': 4, 'চার': 4,
+    'পাঁচ': 5, 'ছয়': 6, 'সাত': 7, 'আঠ': 8, 'আট': 8, 'ন': 9, 'নয়': 9, 'দহ': 10, 'দশ': 10,
+    'বাৰ': 12, 'বারো': 12, 'পোন্ধৰ': 15, 'পনেরো': 15, 'কুৰি': 20, 'বিশ': 20,
+    'পঁচিশ': 25, 'ত্ৰিশ': 30, 'তিরিশ': 30, 'বট্ৰিশ': 32, 'বত্রিশ': 32, 'চল্লিশ': 40, 'পঞ্চাশ': 50,
+
+    // Transliterated & English words
+    'ek': 1, 'don': 2, 'do': 2, 'teen': 3, 'char': 4, 'paach': 5, 'pach': 5,
+    'saha': 6, 'saat': 7, 'aath': 8, 'nau': 9, 'daha': 10, 'das': 10,
     'baara': 12, 'pandhra': 15, 'vees': 20, 'tees': 30, 'battees': 32,
     'chalis': 40, 'pannas': 50,
+    'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+    'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
   };
 
   static const Map<String, String> devDigits = {
+    // Devanagari numerals
     '०': '0', '१': '1', '२': '2', '३': '3', '४': '4',
     '५': '5', '६': '6', '७': '7', '८': '8', '९': '9',
+    // Bengali / Assamese numerals
+    '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4',
+    '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9',
   };
 
   static String norm(String s) {
@@ -711,28 +1017,31 @@ class LocalExtractor {
     );
   }
 
-  static VoiceExtraction extract(String text) {
+  static VoiceExtraction extract(String text, {String lang = 'as'}) {
     final t = norm(text);
     final ext = VoiceExtraction(transcript: text);
 
-    // Patient Name
-    final nameRegex = RegExp(r'(?<![A-Za-z])(?:नाव|naav|name)\s+(\S+)', caseSensitive: false);
+    // Patient Name (Supports Assamese, Bengali, Hindi, English, Marathi)
+    final nameRegex = RegExp(r'(?<![A-Za-z])(?:नाव|naav|name|নাম|नाम|patient name)\s+(\S+)', caseSensitive: false);
     final nameMatch = nameRegex.firstMatch(t);
     if (nameMatch != null) {
       ext.patientName = f<String>(clean(nameMatch.group(1)!), nameMatch.group(0), 0.85);
     } else {
-      final leadingNameRegex = RegExp(r'^\s*([^,।0-9]+?)\s+(?:वय|vay|age)\b', caseSensitive: false);
+      final leadingNameRegex = RegExp(r'^\s*([^,।0-9]+?)\s+(?:वय|vay|age|বয়স|বয়স|উম্ৰ|उम्र)\b', caseSensitive: false);
       final lm = leadingNameRegex.firstMatch(t);
       if (lm != null) {
-        var cand = clean(lm.group(1)!.replaceAll(RegExp(r'^(?:रुग्णाचे|रुग्ण|patient)\s+', caseSensitive: false), ''));
+        var cand = clean(lm.group(1)!.replaceAll(
+          RegExp(r'^(?:रुग्णाचे|रुग्ण|patient|ৰোগীৰ|ৰোগী|রোগীর|রোগী|मरीज का|मरीज)\s+', caseSensitive: false),
+          '',
+        ));
         if (cand.length >= 2 && cand.split(RegExp(r'\s+')).length <= 4) {
           ext.patientName = f<String>(cand, lm.group(0), 0.8);
         }
       }
     }
 
-    // Age
-    final ageRegex = RegExp(r'(?<![A-Za-z])(?:वय|vay|age)\s+(\S+)', caseSensitive: false);
+    // Age (Assamese, Bengali, Hindi, English, Marathi)
+    final ageRegex = RegExp(r'(?<![A-Za-z])(?:वय|vay|age|বয়স|বয়স|উম্ৰ|उम्र)\s+(\S+)', caseSensitive: false);
     final am = ageRegex.firstMatch(t);
     if (am != null) {
       final a = toInt(am.group(1)!);
@@ -740,32 +1049,32 @@ class LocalExtractor {
     }
 
     // Village
-    final villageAfter = RegExp(r'(?:गाव|gaav|gaon|village)\s+([^\s,।]+)', caseSensitive: false).firstMatch(t);
-    final villageBefore = RegExp(r'(\S+)\s+(?:गाव|gaav|gaon|village)', caseSensitive: false).firstMatch(t);
-    const stopWords = {'वय', 'बारा', 'दोन', 'तीन', 'चार', 'पाच', 'सहा', 'सात', 'आठ', 'नऊ', 'दहा', 'वीस', 'तीस', 'चाळीस', 'पन्नास'};
+    final villageAfter = RegExp(r'(?:गाव|gaav|gaon|village|গাঁও|গ্রাম|गाँव)\s+([^\s,।]+)', caseSensitive: false).firstMatch(t);
+    final villageBefore = RegExp(r'(\S+)\s+(?:गाव|gaav|gaon|village|গাঁও|গ্রাম|गाँव)', caseSensitive: false).firstMatch(t);
+    const stopWords = {'वय', 'बारा', 'दोन', 'तीन', 'चार', 'पाच', 'सहा', 'सात', 'आठ', 'नऊ', 'दहा', 'वीस', 'तीस', 'चाळीस', 'पन्नास', 'বয়স', 'দিন', 'পানী', 'पानी'};
 
-    if (villageAfter != null && !RegExp(r'^(?:मध्ये|आहे|येथे|मधील)$', caseSensitive: false).hasMatch(clean(villageAfter.group(1)!))) {
+    if (villageAfter != null && !RegExp(r'^(?:मध्ये|आहे|येथे|मधील|হৈছে|আছিল|হলো)$', caseSensitive: false).hasMatch(clean(villageAfter.group(1)!))) {
       ext.village = f<String>(clean(villageAfter.group(1)!), villageAfter.group(0), 0.8);
     } else if (villageBefore != null && !stopWords.contains(clean(villageBefore.group(1)!).toLowerCase()) && toInt(villageBefore.group(1)!) == null) {
       ext.village = f<String>(clean(villageBefore.group(1)!), villageBefore.group(0), 0.75);
     }
 
     // Duration Days
-    final durMatch = RegExp(r'(\S+)\s+(?:दिवस|दिवसांपासून|divas|divasaanpasun|days?)', caseSensitive: false).firstMatch(t);
+    final durMatch = RegExp(r'(\S+)\s+(?:दिवस|दिवसांपासून|divas|divasaanpasun|days?|দিন|দিনৰ পৰা|দিন ধৰি|दिन|दिनों से)', caseSensitive: false).firstMatch(t);
     if (durMatch != null) {
       final d = toInt(durMatch.group(1)!);
       if (d != null) ext.durationDays = f<int>(d, durMatch.group(0), 0.85);
     }
 
     // Stools
-    final stoolMatch = RegExp(r'(\S+)\s+वेळा\s+(?:शौच|जुलाब)', caseSensitive: false).firstMatch(t);
+    final stoolMatch = RegExp(r'(\S+)\s+(?:वेळा|बार|বাৰ|times?)\s+(?:शौच|जुलाब|পায়খানা|শৌচ|পাতলা|दस्त)', caseSensitive: false).firstMatch(t);
     if (stoolMatch != null) {
       final n = toInt(stoolMatch.group(1)!);
       if (n != null) ext.stoolsPerDay = f<int>(n, stoolMatch.group(0), 0.85);
     }
 
     // Vomit Count
-    final vomitMatch = RegExp(r'(\S+)\s+वेळा\s+उलट', caseSensitive: false).firstMatch(t);
+    final vomitMatch = RegExp(r'(\S+)\s+(?:वेळा|बार|বাৰ|times?)\s+(?:उलट|বমি|उल्टी|vomit)', caseSensitive: false).firstMatch(t);
     if (vomitMatch != null) {
       final n = toInt(vomitMatch.group(1)!);
       if (n != null) ext.vomitCount = f<int>(n, vomitMatch.group(0), 0.85);
@@ -783,20 +1092,20 @@ class LocalExtractor {
       }
     }
 
-    checkSym('diarrhoea', RegExp(r'जुलाब|julaab|पातळ शौच|loose motion|diarrh', caseSensitive: false));
-    checkSym('vomiting', RegExp(r'उलट्या|उलटी|ulti|ulatyaa|vomit', caseSensitive: false));
-    checkSym('abdominal_pain', RegExp(r'पोटदुखी|पोट दुखत|potdukhi|stomach pain', caseSensitive: false));
-    checkSym('weakness', RegExp(r'अशक्तपणा|अशक्त|ashakta|weakness', caseSensitive: false));
-    checkSym('thirst', RegExp(r'तहान|tahan', caseSensitive: false));
-    checkSym('sunken_eyes', RegExp(r'डोळे खोल|khol gelele|sunken', caseSensitive: false));
-    checkSym('jaundice', RegExp(r'कावीळ|काविळ|kavil|jaundice|पिवळे डोळे|पिवळी लघवी', caseSensitive: false));
-    checkSym('cholera', RegExp(r'कॉलरा|पटकी|cholera|patki', caseSensitive: false));
-    checkSym('gastro', RegExp(r'गॅस्ट्रो|gastro|gastroenteritis', caseSensitive: false));
-    checkSym('typhoid', RegExp(r'टायफॉइड|typhoid|विषमज्वर', caseSensitive: false));
+    checkSym('diarrhoea', RegExp(r'जुलाब|julaab|पातळ शौच|loose motion|diarrh|পাতলা শৌচ|ডায়েৰিয়া|পেট চলা|পাতলা পায়খানা|ডায়রিয়া|दस्त', caseSensitive: false));
+    checkSym('vomiting', RegExp(r'उलट्या|उलटी|ulti|ulatyaa|vomit|বমি|ওকালি|उल्टी', caseSensitive: false));
+    checkSym('abdominal_pain', RegExp(r'पोटदुखी|पोट दुखत|potdukhi|stomach pain|পেটৰ বিষ|পেট বিষ|পেটে ব্যথা|পেটব্যথা|पेट दर्द|पेट में दर्द', caseSensitive: false));
+    checkSym('weakness', RegExp(r'अशक्तपणा|अशक्त|ashakta|weakness|দুৰ্বলতা|দুর্বলতা|कमजोरी', caseSensitive: false));
+    checkSym('thirst', RegExp(r'तहान|tahan|पিয়াহ|তৃষ্ণা|प्यास|thirst', caseSensitive: false));
+    checkSym('sunken_eyes', RegExp(r'डोळे खोल|khol gelele|sunken|চকু সোমাই|চোখ বসে|धँसी आँखें', caseSensitive: false));
+    checkSym('jaundice', RegExp(r'कावीळ|काविळ|kavil|jaundice|पिवळे डोळे|पिवळी लघवी|জণ্ডিচ|জন্ডিস|पीलिया', caseSensitive: false));
+    checkSym('cholera', RegExp(r'कॉलरा|पटकी|cholera|patki|কলেৰা|পটকী|কলেরা|हैजा', caseSensitive: false));
+    checkSym('gastro', RegExp(r'गॅस्ट्रो|gastro|gastroenteritis|গেষ্ট্ৰো|গ্যাস্ট্রো', caseSensitive: false));
+    checkSym('typhoid', RegExp(r'टायफॉइड|typhoid|विषमज्वर|টাইফয়েড|টাইফয়েড|टाइफाइड', caseSensitive: false));
 
     // Fever
-    final noFever = RegExp(r'ताप नाही|taap nahi|no fever', caseSensitive: false).firstMatch(t);
-    final fever = RegExp(r'ताप|taap|fever', caseSensitive: false).firstMatch(t);
+    final noFever = RegExp(r'ताप नाही|taap nahi|no fever|জ্বৰ নাই|জ্বর নেই|बुखार नहीं', caseSensitive: false).firstMatch(t);
+    final fever = RegExp(r'ताप|taap|fever|জ্বৰ|জ্বর|बुखार', caseSensitive: false).firstMatch(t);
     if (noFever != null) {
       ext.fever = f<bool>(false, noFever.group(0), 0.85);
     } else if (fever != null) {
@@ -807,8 +1116,8 @@ class LocalExtractor {
     }
 
     // Blood in stool
-    final noBlood = RegExp(r'रक्त नाही|rakta nahi|no blood', caseSensitive: false).firstMatch(t);
-    final blood = RegExp(r'शौचात रक्त|रक्त|rakta|blood', caseSensitive: false).firstMatch(t);
+    final noBlood = RegExp(r'रक्त नाही|rakta nahi|no blood|তেজ নাই|রক্ত নেই|खून नहीं', caseSensitive: false).firstMatch(t);
+    final blood = RegExp(r'शौचात रक्त|रक्त|rakta|blood|শৌচত তেজ|মলে রক্ত|मल में खून', caseSensitive: false).firstMatch(t);
     if (noBlood != null) {
       ext.bloodInStool = f<bool>(false, noBlood.group(0), 0.85);
     } else if (blood != null) {
@@ -822,8 +1131,8 @@ class LocalExtractor {
     }
 
     // Able to drink
-    final cantDrink = RegExp(r'पाणी पिऊ शकत नाही|पाणी पित नाही|pani pit nahi|unable to drink|not able to drink', caseSensitive: false).firstMatch(t);
-    final canDrink = RegExp(r'पाणी पितो|पाणी पिते|पाणी पिऊ शकतो|pani pito|drinking', caseSensitive: false).firstMatch(t);
+    final cantDrink = RegExp(r'पाणी पिऊ शकत नाही|पाणी पित नाही|pani pit nahi|unable to drink|not able to drink|পানী খাব পৰা নাই|পানি খেতে পারছে না|पानी नहीं पी पा रहा', caseSensitive: false).firstMatch(t);
+    final canDrink = RegExp(r'पाणी पितो|पाणी पिते|पाणी पिऊ शकतो|pani pito|drinking|পানী খায়|পানী খাব পাৰে|পানি খেতে পারে|पानी पी रहा है|पानी पीती है', caseSensitive: false).firstMatch(t);
     if (cantDrink != null) {
       ext.ableToDrink = f<bool>(false, cantDrink.group(0), 0.85);
     } else if (canDrink != null) {
@@ -831,37 +1140,37 @@ class LocalExtractor {
     }
 
     // Very Sleepy
-    final sleepy = RegExp(r'सुस्त|झोपाळू|susta|lethargic|very sleepy', caseSensitive: false).firstMatch(t);
+    final sleepy = RegExp(r'सुस्त|झोपाळू|susta|lethargic|very sleepy|অচেতন|নিস্তেজ|এলাহ|बहुत सुस्त', caseSensitive: false).firstMatch(t);
     if (sleepy != null) ext.verySleepy = f<bool>(true, sleepy.group(0), 0.85);
 
     // ORS
-    final ors = RegExp(r'(?<![A-Za-z])(?:ors|ओआरएस)(?![A-Za-z])\s*(दिले|नाही|nahi)?', caseSensitive: false).firstMatch(t);
+    final ors = RegExp(r"(?<![A-Za-z])(?:ors|ओआरएस|ওআরএস|অ'আৰ'এছ)(?![A-Za-z])\s*(दिले|नाही|nahi|দিছে|দিয়েছে|दिया)?", caseSensitive: false).firstMatch(t);
     if (ors != null) {
-      final negated = ors.group(1) != null && RegExp(r'नाही|nahi', caseSensitive: false).hasMatch(ors.group(1)!);
+      final negated = ors.group(1) != null && RegExp(r'नाही|nahi|নাই|নেই|नहीं', caseSensitive: false).hasMatch(ors.group(1)!);
       ext.orsGiven = f<bool>(!negated, ors.group(0)!.trim(), 0.85);
     }
 
     // Others sick
-    final others = RegExp(r'इतरही आजारी|इतर आजारी|others sick', caseSensitive: false).firstMatch(t);
+    final others = RegExp(r'इतरही आजारी|इतर आजारी|others sick|আন লোকো অসুস্থ|অন্যরাও অসুস্থ|घर में अन्य बीमार', caseSensitive: false).firstMatch(t);
     if (others != null) ext.othersSickAtHome = f<bool>(true, others.group(0), 0.85);
 
     // Water source
-    final ws = RegExp(r'विहीर|कूपनलिका|हँडपंप|नदी|ओढा|नल|पाइपलाइन|well|borewell|river|tap', caseSensitive: false).firstMatch(t);
+    final ws = RegExp(r'विहीर|कूपनलिका|हँडपंप|नदी|ओढा|नल|पाइपलाइन|কুঁৱা|পুখুৰী|নল|টিউবৱেল|কুয়ো|পুকুর|कुआं|तालाब|झरना|well|borewell|river|tap|stream|pond', caseSensitive: false).firstMatch(t);
     if (ws != null) ext.waterSource = f<String>(ws.group(0), ws.group(0), 0.8);
 
     // Pregnancy
-    final preg = RegExp(r'गर्भवती|pregnan', caseSensitive: false).firstMatch(t);
+    final preg = RegExp(r'गर्भवती|pregnan|গৰ্ভৱতী|গর্ভবতী', caseSensitive: false).firstMatch(t);
     if (preg != null) ext.pregnancy = f<bool>(true, preg.group(0), 0.85);
 
     // Infant
-    final infant = RegExp(r'बाळ|infant|baby', caseSensitive: false).firstMatch(t);
+    final infant = RegExp(r'बाळ|infant|baby|কেঁচুৱা|শিশু|छोटा बच्चा', caseSensitive: false).firstMatch(t);
     if (infant != null) ext.infant = f<bool>(true, infant.group(0), 0.85);
 
     // Gender
-    if (RegExp(r'त्याला|tyala', caseSensitive: false).hasMatch(t)) {
-      ext.gender = f<String>('male', 'त्याला', 0.65);
-    } else if (RegExp(r'तिला|tila|ती', caseSensitive: false).hasMatch(t)) {
-      ext.gender = f<String>('female', 'तिला', 0.65);
+    if (RegExp(r'त्याला|tyala|তাক|তাকে|उसको|he|him', caseSensitive: false).hasMatch(t)) {
+      ext.gender = f<String>('male', 'त्याला/তাক', 0.65);
+    } else if (RegExp(r'तिला|tila|ती|তাইক|তাকে|उसकी|she|her', caseSensitive: false).hasMatch(t)) {
+      ext.gender = f<String>('female', 'तिला/তাইক', 0.65);
     }
 
     return ext;
@@ -882,60 +1191,78 @@ List<String> computeDangerSigns(VoiceExtraction x) {
   return d;
 }
 
-WaterRiskAssessment computeWaterRisk(VoiceExtraction x, {bool mr = true}) {
+WaterRiskAssessment computeWaterRisk(VoiceExtraction x, {bool mr = false, String lang = 'as'}) {
+  final activeLang = (mr && lang == 'as') ? 'mr' : lang;
   final sy = x.symptoms.value ?? [];
   int score = 0;
   final matched = <String>[];
 
+  String loc(String en, {String? as, String? bn, String? hi, String? mr}) {
+    switch (activeLang) {
+      case 'as': return as ?? bn ?? en;
+      case 'bn': return bn ?? as ?? en;
+      case 'hi': return hi ?? en;
+      case 'mr': return mr ?? en;
+      default: return en;
+    }
+  }
+
   if (sy.contains('cholera')) {
     score += 45;
-    matched.add(mr ? 'कॉलरा / पटकी' : 'Cholera');
+    matched.add(loc('Cholera', as: 'কলেৰা / পটকী', bn: 'কলেরা', hi: 'हैजा / कॉलरा', mr: 'कॉलरा / पटकी'));
   }
   if (sy.contains('jaundice')) {
     score += 40;
-    matched.add(mr ? 'कावीळ' : 'Jaundice');
+    matched.add(loc('Jaundice', as: 'জণ্ডিচ', bn: 'জন্ডিস', hi: 'पीलिया', mr: 'कावीळ'));
   }
   if (sy.contains('gastro')) {
     score += 35;
-    matched.add(mr ? 'गॅस्ट्रो' : 'Gastroenteritis');
+    matched.add(loc('Gastroenteritis', as: 'গেষ্ট্ৰো', bn: 'গ্যাস্ট্রো', hi: 'गैस्ट्रो', mr: 'गॅस्ट्रो'));
   }
   if (sy.contains('typhoid') || x.fever.value == true) {
     score += 25;
-    matched.add(mr ? 'टायफॉइड / ताप' : 'Typhoid / Fever');
+    matched.add(loc('Typhoid / Fever', as: 'টাইফয়েড / জ্বৰ', bn: 'টাইফয়েড / জ্বর', hi: 'टाइफाइड / बुखार', mr: 'टायफॉइड / ताप'));
   }
   if (sy.contains('diarrhoea')) {
     score += 30;
-    matched.add(mr ? 'जुलाब' : 'Diarrhoea');
+    matched.add(loc('Diarrhoea', as: 'পাতলা শৌচ', bn: 'পাতলা পায়খানা', hi: 'दस्त / डायरिया', mr: 'जुलाब'));
   }
   if (sy.contains('vomiting')) {
     score += 20;
-    matched.add(mr ? 'उलट्या' : 'Vomiting');
+    matched.add(loc('Vomiting', as: 'বমি / ওকালি', bn: 'বমি', hi: 'उल्टी', mr: 'उलट्या'));
   }
   if (sy.contains('blood_in_stool') || x.bloodInStool.value == true) {
     score += 25;
-    matched.add(mr ? 'शौचात रक्त' : 'Dysentery / Blood in stool');
+    matched.add(loc('Dysentery / Blood in stool', as: 'শৌচত তেজ', bn: 'মলে রক্ত', hi: 'शौच में खून', mr: 'शौचात रक्त'));
   }
   if (sy.contains('abdominal_pain')) {
     score += 15;
-    matched.add(mr ? 'पोटदुखी' : 'Abdominal pain');
+    matched.add(loc('Abdominal pain', as: 'পেটৰ বিষ', bn: 'পেটে ব্যথা', hi: 'पेट दर्द', mr: 'पोटदुखी'));
   }
   if (x.othersSickAtHome.value == true) {
     score += 20;
-    matched.add(mr ? 'घरात इतरही आजारी' : 'Household cluster');
+    matched.add(loc('Household cluster', as: 'ঘৰত আন লোকো অসুস্থ', bn: 'পরিবারে অন্যরা অসুস্থ', hi: 'घर में अन्य बीमार', mr: 'घरात इतरही आजारी'));
   }
 
   final ws = (x.waterSource.value ?? '').toLowerCase();
   if (ws.contains('विहीर') ||
       ws.contains('well') ||
+      ws.contains('কুঁৱা') ||
+      ws.contains('কুয়ো') ||
+      ws.contains('कुआं') ||
       ws.contains('ओढा') ||
-      ws.contains('नदी') ||
+      ws.contains('নদী') ||
+      ws.contains('নদীৰ') ||
       ws.contains('river') ||
-      ws.contains('कूपनलिका') ||
+      ws.contains('stream') ||
+      ws.contains('ঝরনা') ||
+      ws.contains('কূপनलिका') ||
       ws.contains('borewell') ||
       ws.contains('handpump') ||
-      ws.contains('हँडपंप')) {
+      ws.contains('हँडपंप') ||
+      ws.contains('টিউবৱেল')) {
     score += 15;
-    matched.add(mr ? 'असुरक्षित पाण्याचा स्रोत' : 'Unprotected water source');
+    matched.add(loc('Unprotected water source', as: 'অসুৰক্ষিত পানীৰ উৎস', bn: 'অসুরক্ষিত জলের উৎস', hi: 'असुरक्षित जल स्रोत', mr: 'असुरक्षित पाण्याचा स्रोत'));
   }
 
   final isWater = score >= 25 ||
@@ -952,80 +1279,174 @@ WaterRiskAssessment computeWaterRisk(VoiceExtraction x, {bool mr = true}) {
 
   String reason;
   if (sy.contains('jaundice')) {
-    reason = mr
-        ? 'सध्याची लक्षणे (${matched.join(', ')}) दूषित पाण्यामुळे होणाऱ्या विषाणूजन्य कावीळ (Hepatitis A / E) संसर्गाशी सुसंगत आहेत.'
-        : 'Reported symptoms (${matched.join(', ')}) strongly correlate with water-borne Viral Hepatitis (Hep A/E).';
+    reason = loc(
+      'Reported symptoms (${matched.join(', ')}) strongly correlate with water-borne Viral Hepatitis (Hep A/E).',
+      as: 'বৰ্তমানৰ লক্ষণসমূহ (${matched.join(', ')}) দূষিত পানীৰ ফলত হোৱা ভাইৰেল জণ্ডিচ (Hepatitis A / E) সংক্ৰমণৰ সৈতে মিলে।',
+      bn: 'বর্তমান লক্ষণগুলি (${matched.join(', ')}) দূষিত জলের কারণে সৃষ্ট ভাইরাল জন্ডিস (Hepatitis A/E) সংক্রমণের ইঙ্গিত দেয়।',
+      hi: 'वर्तमान लक्षण (${matched.join(', ')}) दूषित पानी से होने वाले वायरल हेपेटाइटिस (पीलिया) से मेल खाते हैं।',
+      mr: 'सध्याची लक्षणे (${matched.join(', ')}) दूषित पाण्यामुळे होणाऱ्या विषाणूजन्य कावीळ (Hepatitis A / E) संसर्गाशी सुसंगत आहेत.',
+    );
   } else if (sy.contains('cholera')) {
-    reason = mr
-        ? 'सध्याची लक्षणे (${matched.join(', ')}) तीव्र जलजन्य कॉलरा / पटकी संसर्गाशी सुसंगत असून तात्काळ जलसंजीवनी आवश्यक आहे.'
-        : 'Reported symptoms (${matched.join(', ')}) indicate high risk of acute water-borne Cholera.';
+    reason = loc(
+      'Reported symptoms (${matched.join(', ')}) indicate high risk of acute water-borne Cholera.',
+      as: 'বৰ্তমানৰ লক্ষণসমূহ (${matched.join(', ')}) তীব্ৰ জলজনিত কলেৰা / পটকী সংক্ৰমণৰ আশংকা ব্যক্ত কৰে, তৎকালীন চিকিৎসা আৱশ্যক।',
+      bn: 'বর্তমান লক্ষণগুলি (${matched.join(', ')}) তীব্র জলবাহিত কলেরা সংক্রমণের ঝুঁকিপূর্ণ ইঙ্গিত দেয়, অবিলম্বে রিহাইড্রেশন প্রয়োজন।',
+      hi: 'वर्तमान लक्षण (${matched.join(', ')}) तीव्र जलजन्य हैजा / कॉलरा संक्रमण की ओर संकेत करते हैं, तत्काल ओआरएस दें।',
+      mr: 'सध्याची लक्षणे (${matched.join(', ')}) तीव्र जलजन्य कॉलरा / पटकी संसर्गाशी सुसंगत असून तात्काळ जलसंजीवनी आवश्यक आहे.',
+    );
   } else if (sy.contains('typhoid') && !sy.contains('diarrhoea')) {
-    reason = mr
-        ? 'सध्याची लक्षणे (${matched.join(', ')}) दूषित पाणी किंवा अन्नातून पसरणाऱ्या विषमज्वराशी (Typhoid / Enteric Fever) सुसंगत आहेत.'
-        : 'Reported indicators (${matched.join(', ')}) correlate with water/food-borne Enteric Fever (Typhoid).';
+    reason = loc(
+      'Reported indicators (${matched.join(', ')}) correlate with water/food-borne Enteric Fever (Typhoid).',
+      as: 'লক্ষণসমূহ (${matched.join(', ')}) দূষিত পানী বা খাদ্যৰ পৰা হোৱা বিষমজ্বৰ (টাইফয়েড)-ৰ সৈতে সাদৃশ্যপূৰ্ণ।',
+      bn: 'লক্ষণগুলি (${matched.join(', ')}) দূষিত জল বা খাবার থেকে ছড়ানো টাইফয়েড জ্বরের সাথে সম্পর্কিত।',
+      hi: 'लक्षण (${matched.join(', ')}) दूषित पानी या भोजन से फैलने वाले आंत्र ज्वर (टाइफाइड) से मेल खाते हैं।',
+      mr: 'सध्याची लक्षणे (${matched.join(', ')}) दूषित पाणी किंवा अन्नातून पसरणाऱ्या विषमज्वराशी (Typhoid / Enteric Fever) सुसंगत आहेत.',
+    );
   } else if (sy.contains('abdominal_pain') && !sy.contains('diarrhoea') && !sy.contains('vomiting')) {
     reason = isWater
-        ? (mr
-            ? 'पोटदुखी व पाण्याचा स्रोत (${matched.join(', ')}) लक्षात घेता दूषित पाण्यामुळे होणारा जंत संसर्ग किंवा गॅस्ट्रायटिसची शक्यता आहे.'
-            : 'Abdominal pain with ${matched.join(', ')} suggests possible water-borne protozoal/worm infection or gastritis.')
-        : (mr
-            ? 'केवळ पोटदुखी हे लक्षण असून तीव्र जलजन्य अतिसाराची चिन्हे नाहीत; तरीही उकळलेले पाणी व हलका आहार घ्यावा.'
-            : 'Isolated abdominal pain without acute diarrhoeal signs; advise boiled water and light diet.');
+        ? loc(
+            'Abdominal pain with ${matched.join(', ')} suggests possible water-borne protozoal/worm infection or gastritis.',
+            as: 'পেটৰ বিষ আৰু পানীৰ উৎস (${matched.join(', ')}) পৰা জলজনিত কৃমি বা গেষ্ট্ৰিক সংক্ৰমণৰ সম্ভাৱনা আছে।',
+            bn: 'পেটে ব্যথা এবং জলের উৎস (${matched.join(', ')}) বিবেচনা করে জলবাহিত কৃমি বা গ্যাস্ট্রাইটিসের সম্ভাবনা রয়েছে।',
+            hi: 'पेट दर्द और जल स्रोत (${matched.join(', ')}) से जलजन्य कृमि या गैस्ट्राइटिस की संभावना है।',
+            mr: 'पोटदुखी व पाण्याचा स्रोत (${matched.join(', ')}) लक्षात घेता दूषित पाण्यामुळे होणारा जंत संसर्ग किंवा गॅस्ट्रायटिसची शक्यता आहे.',
+          )
+        : loc(
+            'Isolated abdominal pain without acute diarrhoeal signs; advise boiled water and light diet.',
+            as: 'কেৱল পেটৰ বিষ, তীব্ৰ ডায়েৰিয়াৰ লক্ষণ নাই; উতলোৱা পানী আৰু লঘু আহাৰ খাবলৈ পৰামৰ্শ দিয়ক।',
+            bn: 'শুধু পেটে ব্যথা, তীব্র ডায়রিয়ার লক্ষণ নেই; ফুটানো জল ও সহজপাচ্য খাবার গ্রহণের পরামর্শ দিন।',
+            hi: 'केवल पेट दर्द है, तीव्र दस्त नहीं; उबला पानी और हल्का भोजन लेने की सलाह दें।',
+            mr: 'केवळ पोटदुखी हे लक्षण असून तीव्र जलजन्य अतिसाराची चिन्हे नाहीत; तरीही उकळलेले पाणी व हलका आहार घ्यावा.',
+          );
   } else if (isWater) {
-    reason = mr
-        ? 'सध्याची लक्षणे (${matched.join(', ')}) दूषित पाणी किंवा अस्वच्छतेमुळे उद्भवणाऱ्या जलजन्य आजाराशी (Water-borne Illness) सुसंगत आहेत.'
-        : 'Reported clinical indicators (${matched.join(', ')}) strongly correlate with a water-borne infection.';
+    reason = loc(
+      'Reported clinical indicators (${matched.join(', ')}) strongly correlate with a water-borne infection.',
+      as: 'বৰ্তমানৰ লক্ষণসমূহ (${matched.join(', ')}) দূষিত পানীৰ ফলত হোৱা জলজনিত ৰোগৰ সৈতে সুসংগত।',
+      bn: 'লক্ষণগুলি (${matched.join(', ')}) স্পষ্টভাবেই দূষিত জলবাহিত সংক্রমণের সাথে মিলে যায়।',
+      hi: 'लक्षण (${matched.join(', ')}) दूषित पानी से होने वाले जलजन्य संक्रमण से मेल खाते हैं।',
+      mr: 'सध्याची लक्षणे (${matched.join(', ')}) दूषित पाणी किंवा अस्वच्छतेमुळे उद्भवणाऱ्या जलजन्य आजाराशी (Water-borne Illness) सुसंगत आहेत.',
+    );
   } else {
-    reason = mr
-        ? 'सध्याची लक्षणे थेट दूषित पाण्यामुळे उद्भवलेली वाटत नाहीत. तरीही स्वच्छता व योग्य काळजी आवश्यक आहे.'
-        : 'Symptoms do not directly indicate a water-borne cause. Routine hydration and hygiene are advised.';
+    reason = loc(
+      'Symptoms do not directly indicate a water-borne cause. Routine hydration and hygiene are advised.',
+      as: 'লক্ষণসমূহ পোনপটীয়াকৈ দূষিত পানীৰ পৰা হোৱা যেন নালাগে। পৰ্যাপ্ত পানী আৰু পৰিষ্কাৰ-পৰিচ্ছন্নতা বৰ্তাই ৰাখক।',
+      bn: 'লক্ষণগুলি সরাসরি জলবাহিত বলে মনে হচ্ছে না। পর্যাপ্ত জল পান ও পরিষ্কার-পরিচ্ছন্নতা বজায় রাখুন।',
+      hi: 'लक्षण सीधे तौर पर जलजन्य नहीं लगते। नियमित स्वच्छता व पर्याप्त पानी पीने की सलाह दी जाती है।',
+      mr: 'सध्याची लक्षणे थेट दूषित पाण्यामुळे उद्भवलेली वाटत नाहीत. तरीही स्वच्छता व योग्य काळजी आवश्यक आहे.',
+    );
   }
 
   List<String> tips;
   if (sy.contains('jaundice')) {
-    tips = mr
+    tips = (activeLang == 'as')
         ? [
-            'पिण्याचे पाणी किमान २० मिनिटे उकळून थंड करूनच प्या.',
-            'तेलकट, तळलेले व मसालेदार पदार्थ पूर्णपणे टाळा; मऊ व सात्त्विक आहार घ्या.',
-            'रुग्णाला पूर्ण विश्रांती द्या आणि डॉक्टरांच्या सल्ल्याशिवाय कोणतीही औषधे घेऊ नका.',
-            'प्राथमिक आरोग्य केंद्रात (PHC) रक्त तपासणी (Bilirubin / LFT) करून घ्या.',
+            'খোৱা পানী কমেও ২০ মিনিট ভালদৰে উতলাই ঠাণ্ডা কৰি খাওক।',
+            'তেল, মছলা আৰু ভজা খাদ্য পৰিহাৰ কৰক; সহজপাচ্য আহাৰ দিয়ক।',
+            'ৰোগীক সম্পূৰ্ণ বিশ্ৰাম দিয়ক আৰু ডাক্তৰৰ পৰামৰ্শ অবিহনে ঔষধ নিদিব।',
+            'নিকটৱৰ্তী স্বাস্থ্য কেন্দ্ৰত (PHC) তেজ পৰীক্ষা (Bilirubin / LFT) কৰাওক।',
           ]
-        : [
-            'Drink only water that has been boiled vigorously for 20 minutes.',
-            'Strictly avoid oily, fried, and spicy foods; take a soft carbohydrate-rich diet.',
-            'Ensure complete rest and avoid unprescribed medications.',
-            'Visit the PHC for Liver Function Tests (Bilirubin / LFT).',
-          ];
+        : (activeLang == 'bn')
+            ? [
+                'পানীয় জল কমপক্ষে ২০ মিনিট ফুটিয়ে ঠান্ডা করে পান করুন।',
+                'তেল-মশলাযুক্ত খাবার এড়িয়ে চলুন; নরম পুষ্টিকর খাবার দিন।',
+                'রোগীকে সম্পূর্ণ বিশ্রামে রাখুন এবং ডাক্তারের পরামর্শ ছাড়া ওষুধ দেবেন না।',
+                'নিকটস্থ স্বাস্থ্য কেন্দ্রে (PHC) গিয়ে রক্ত পরীক্ষা (Bilirubin / LFT) করান।',
+              ]
+            : (activeLang == 'hi')
+                ? [
+                    'पीने का पानी कम से कम 20 मिनट उबालकर ठंडा करके पिएं।',
+                    'तले-भुने और मसालेदार भोजन से बचें; सुपाच्य आहार लें।',
+                    'मरीज को पूरा आराम दें और डॉक्टर की सलाह बिना दवा न लें।',
+                    'प्राथमिक स्वास्थ्य केंद्र (PHC) जाकर लिवर की जांच (LFT) करवाएं।',
+                  ]
+                : (activeLang == 'mr')
+                    ? [
+                        'पिण्याचे पाणी किमान २० मिनिटे उकळून थंड करूनच प्या.',
+                        'तेलकट, तळलेले व मसालेदार पदार्थ पूर्णपणे टाळा; मऊ व सात्त्विक आहार घ्या.',
+                        'रुग्णाला पूर्ण विश्रांती द्या आणि डॉक्टरांच्या सल्ल्याशिवाय कोणतीही औषधे घेऊ नका.',
+                        'प्राथमिक आरोग्य केंद्रात (PHC) रक्त तपासणी (Bilirubin / LFT) करून घ्या.',
+                      ]
+                    : [
+                        'Drink only water that has been boiled vigorously for 20 minutes.',
+                        'Strictly avoid oily, fried, and spicy foods; take a soft carbohydrate-rich diet.',
+                        'Ensure complete rest and avoid unprescribed medications.',
+                        'Visit the PHC for Liver Function Tests (Bilirubin / LFT).',
+                      ];
   } else if (isWater) {
-    tips = mr
+    tips = (activeLang == 'as')
         ? [
-            'पिण्याचे पाणी किमान २० मिनिटे उकळून किंवा मेडिक्लोर / क्लोरिन गोळ्या टाकूनच प्या.',
-            'डिहायड्रेशन रोखण्यासाठी रुग्णाला वारंवार ओआरएस (ORS) पाणी, ताक किंवा लिंबू पाणी द्या.',
-            'उघड्यावरील, शिळे अन्न किंवा अस्वच्छ बर्फ खाणे टाळा.',
-            'जेवणापूर्वी व शौचाहून आल्यावर हात साबणाने स्वच्छ धुवा.',
-            if (pct >= 70) 'धोक्याची चिन्हे आढळल्यास त्वरित जवळच्या प्राथमिक आरोग्य केंद्रात (PHC) दाखवा.',
+            'খোৱা পানী ২০ মিনিট উতলাই বা ক্ল’ৰিন মিশ্ৰণ কৰি খাওক।',
+            'শৰীৰত পানীৰ অভাৱ ৰোধ কৰিবলৈ ওআৰএছ (ORS) বা নিমখ-চেনিৰ পানী দিয়ক।',
+            'মুকলি, পুৰণি বা অস্বাস্থ্যকৰ খাদ্য পৰিহাৰ কৰক।',
+            'খোৱাৰ আগত আৰু শৌচাগাৰ ব্যৱহাৰৰ পিছত চাবোনেৰে হাত ধুব।',
+            if (pct >= 70) 'বিপদৰ লক্ষণ দেখা দিলে তৎকালীনভাৱে চিকিৎসালয়লৈ লৈ যাওক।',
           ]
-        : [
-            'Boil drinking water vigorously for 20 minutes or treat with chlorine drops.',
-            'Administer low-osmolarity ORS solution after every loose stool to prevent dehydration.',
-            'Avoid open, unhygienic, or stale food and untreated surface water.',
-            'Wash hands thoroughly with soap before meals and after defecation.',
-            if (pct >= 70) 'Seek immediate medical evaluation at the nearest Primary Health Centre (PHC).',
-          ];
+        : (activeLang == 'bn')
+            ? [
+                'পানীয় জল ২০ মিনিট ফুটিয়ে অথবা ক্লোরিন দিয়ে শোধন করে পান করুন।',
+                'পানিশূন্যতা রোধে ঘন ঘন ওআরএস (ORS) বা স্যালাইনের জল দিন।',
+                'খোলা, বাসি খাবার ও দূষিত জল এড়িয়ে চলুন।',
+                'খাওয়ার আগে ও শৌচের পর সাবান দিয়ে ভালো করে হাত ধোন।',
+                if (pct >= 70) 'বিপদের লক্ষণ দেখা দিলে দ্রুত নিকটস্থ স্বাস্থ্য কেন্দ্রে যোগাযোগ করুন।',
+              ]
+            : (activeLang == 'hi')
+                ? [
+                    'पीने का पानी 20 मिनट उबालकर अथवा क्लोरीन की गोली डालकर पिएं।',
+                    'निर्जलीकरण (Dehydration) रोकने के लिए बार-बार ओआरएस (ORS) का घोल दें।',
+                    'खुला या बासी खाना खाने से बचें।',
+                    'खाने से पहले और शौच के बाद साबुन से हाथ अच्छी तरह धोएं।',
+                    if (pct >= 70) 'खतरे के लक्षण दिखने पर तुरंत प्राथमिक स्वास्थ्य केंद्र (PHC) ले जाएं।',
+                  ]
+                : (activeLang == 'mr')
+                    ? [
+                        'पिण्याचे पाणी किमान २० मिनिटे उकळून किंवा मेडिक्लोर / क्लोरिन गोळ्या टाकूनच प्या.',
+                        'डिहायड्रेशन रोखण्यासाठी रुग्णाला वारंवार ओआरएस (ORS) पाणी, ताक किंवा लिंबू पाणी द्या.',
+                        'उघड्यावरील, शिळे अन्न किंवा अस्वच्छ बर्फ खाणे टाळा.',
+                        'जेवणापूर्वी व शौचाहून आल्यावर हात साबणाने स्वच्छ धुवा.',
+                        if (pct >= 70) 'धोक्याची चिन्हे आढळल्यास त्वरित जवळच्या प्राथमिक आरोग्य केंद्रात (PHC) दाखवा.',
+                      ]
+                    : [
+                        'Boil drinking water vigorously for 20 minutes or treat with chlorine drops.',
+                        'Administer low-osmolarity ORS solution after every loose stool to prevent dehydration.',
+                        'Avoid open, unhygienic, or stale food and untreated surface water.',
+                        'Wash hands thoroughly with soap before meals and after defecation.',
+                        if (pct >= 70) 'Seek immediate medical evaluation at the nearest Primary Health Centre (PHC).',
+                      ];
   } else {
-    tips = mr
+    tips = (activeLang == 'as')
         ? [
-            'भरपूर स्वच्छ पाणी प्या आणि पुरेशी विश्रांती घ्या.',
-            'घरगुती ताजा व हलका आहार घ्या (उदा. मऊ भात, खिचडी, फळे).',
-            'हात व वैयक्तिक स्वच्छता राखा; जेवणापूर्वी हात स्वच्छ धुवा.',
-            '२ दिवसांत आराम न वाटल्यास डॉक्टरांचा किंवा आशा सेविकेचा सल्ला घ्या.',
+            'পৰ্যাপ্ত পৰিমাণে পৰিষ্কাৰ পানী খাওক আৰু বিশ্ৰাম লওক।',
+            'ঘৰৰ সতেজ আৰু লঘু খাদ্য খাওক।',
+            'হাত আৰু ব্যক্তিগত পৰিষ্কাৰ-পৰিচ্ছন্নতা বৰ্তাই ৰাখক।',
+            '২ দিনত আৰোগ্য নহ\'লে আশা কৰ্মী বা চিকিৎসকৰ পৰামৰ্শ লওক।',
           ]
-        : [
-            'Drink plenty of clean fluids and ensure adequate rest.',
-            'Eat light, fresh, nutritious home-cooked meals.',
-            'Maintain personal hygiene and wash hands regularly.',
-            'Consult a doctor or ASHA health worker if symptoms persist over 2 days.',
-          ];
+        : (activeLang == 'bn')
+            ? [
+                'পর্যাপ্ত পরিষ্কার জল পান করুন এবং বিশ্রাম নিন।',
+                'টাটকা ও সহজপাচ্য ঘরের তৈরি খাবার খান।',
+                'নিয়মিত হাত ধুয়ে ব্যক্তিগত পরিচ্ছন্নতা বজায় রাখুন।',
+                '২ দিনে উন্নতি না হলে আশা কর্মী বা ডাক্তারের পরামর্শ নিন।',
+              ]
+            : (activeLang == 'hi')
+                ? [
+                    'भरपूर साफ पानी पिएं और पर्याप्त आराम करें।',
+                    'घर का बना ताजा व हल्का भोजन लें।',
+                    'व्यक्तिगत स्वच्छता रखें और नियमित हाथ धोएं।',
+                    '2 दिन में सुधार न होने पर आशा दीदी या डॉक्टर से मिलें।',
+                  ]
+                : (activeLang == 'mr')
+                    ? [
+                        'भरपूर स्वच्छ पाणी प्या आणि पुरेशी विश्रांती घ्या.',
+                        'घरगुती ताजा व हलका आहार घ्या (उदा. मऊ भात, खिचडी, फळे).',
+                        'हात व वैयक्तिक स्वच्छता राखा; जेवणापूर्वी हात स्वच्छ धुवा.',
+                        '२ दिवसांत आराम न वाटल्यास डॉक्टरांचा किंवा आशा सेविकेचा सल्ला घ्या.',
+                      ]
+                    : [
+                        'Drink plenty of clean fluids and ensure adequate rest.',
+                        'Eat light, fresh, nutritious home-cooked meals.',
+                        'Maintain personal hygiene and wash hands regularly.',
+                        'Consult a doctor or ASHA health worker if symptoms persist over 2 days.',
+                      ];
   }
 
   return WaterRiskAssessment(
@@ -1038,34 +1459,37 @@ WaterRiskAssessment computeWaterRisk(VoiceExtraction x, {bool mr = true}) {
   );
 }
 
-DoctorResult buildSimulatedDoctorConsult(String text, {bool mr = true}) {
+DoctorResult buildSimulatedDoctorConsult(String text, {bool mr = false, String lang = 'as'}) {
+  mr = mr || lang == 'mr';
+  final activeLang = mr ? 'mr' : lang;
+  final isMr = mr;
   final t = text.toLowerCase();
   bool has(Pattern p) => p.allMatches(t).isNotEmpty;
 
-  final extracted = LocalExtractor.extract(text);
+  final extracted = LocalExtractor.extract(text, lang: activeLang);
   final age = extracted.ageYears.value;
   final duration = extracted.durationDays.value;
-  final village = extracted.village.value ?? (mr ? 'शिरोळ / पिंपरी' : 'Shirol / Pimpri');
+  final village = extracted.village.value ?? ((activeLang == 'as') ? 'মাজুলী / বৰপেটা' : (activeLang == 'bn') ? 'ধর্মনগর' : (activeLang == 'hi') ? 'पासीघाट' : isMr ? 'शिरोळ / पिंपरी' : 'Majuli / Kohima');
 
   final flags = <String>[];
-  if (has(RegExp(r'डोळे खोल|sunken'))) flags.add('sunken_eyes');
-  if (has(RegExp(r'पाणी पिऊ शकत नाही|पाणी पित नाही|unable to drink'))) flags.add('unable_to_drink');
-  if (has(RegExp(r'सुस्त|झोपाळू|lethargic'))) flags.add('lethargy');
-  if (!has(RegExp(r'रक्त नाही|no blood')) && has(RegExp(r'शौचात रक्त|रक्त|आमांश|blood|dysentery'))) flags.add('blood_in_stool');
-  if (has(RegExp(r'गर्भवती|pregnan'))) flags.add('pregnancy');
-  if (has(RegExp(r'चार वेळा उलट|पाच वेळा उलट|वारंवार उलट्या|तीन वेळा उलट'))) flags.add('repeated_vomiting');
-  if ((age != null && age < 1) || has(RegExp(r'बाळ|infant|baby'))) flags.add('very_young_child');
+  if (has(RegExp(r'डोळे खोल|sunken|চকু সোমাই|চোখ বসে|धँसी आँख'))) flags.add('sunken_eyes');
+  if (has(RegExp(r'पाणी पिऊ शकत नाही|पाणी पित नाही|unable to drink|পানী খাব পৰা নাই|পানি খেতে পারছে না|पानी नहीं पी पा रहा'))) flags.add('unable_to_drink');
+  if (has(RegExp(r'सुस्त|झोपाळू|lethargic|অচেতন|নিস্তেজ|बहुत सुस्त'))) flags.add('lethargy');
+  if (!has(RegExp(r'रक्त नाही|no blood|তেজ নাই|রক্ত নেই|खून नहीं')) && has(RegExp(r'शौचात रक्त|रक्त|आमांश|blood|dysentery|শৌচত তেজ|মলে রক্ত|मल में खून'))) flags.add('blood_in_stool');
+  if (has(RegExp(r'गर्भवती|pregnan|গৰ্ভৱতী|গর্ভবতী'))) flags.add('pregnancy');
+  if (has(RegExp(r'चार वेळा|पाच वेळा|वारंवार|तीन वेळा|বাৰে বাৰে বমি|বারবার বমি|बार-बार उल्टी'))) flags.add('repeated_vomiting');
+  if ((age != null && age < 1) || has(RegExp(r'बाळ|infant|baby|কেঁচুৱা|শিশু|छोटा बच्चा'))) flags.add('very_young_child');
   if (duration != null && duration >= 7) flags.add('long_duration');
 
   final snippet = text.length > 90 ? '${text.substring(0, 90)}…' : text;
 
-  final hasDiarrhoea = has(RegExp(r'जुलाब|पातळ शौच|loose motion|diarrh|गॅस्ट्रो|gastro|अतिसार'));
-  final hasCholera = has(RegExp(r'कॉलरा|पटकी|cholera|patki|आठ वेळा जुलाब|भाताच्या पेज'));
-  final hasBloodStool = !has(RegExp(r'रक्त नाही|no blood')) && has(RegExp(r'शौचात रक्त|रक्त पड|आमांश|आव पड|dysentery|blood in stool'));
-  final hasJaundice = has(RegExp(r'कावीळ|काविळ|पिवळे डोळे|पिवळी लघवी|jaundice|hepatitis|यकृत'));
-  final hasFever = !has(RegExp(r'ताप नाही|no fever|taap nahi')) && has(RegExp(r'ताप|थंडी वाजून|टायफॉइड|विषमज्वर|डेंग्यू|मलेरिया|fever|typhoid|malaria|dengue'));
-  final hasAbdominalPain = has(RegExp(r'पोटदुखी|पोट दुख|पोटात दुख|पोटात कळ|पोटात गोळा|अॅसिडिटी|जंत|potdukhi|stomach pain|abdominal pain|gastritis'));
-  final hasVomiting = has(RegExp(r'उलट्या|उलटी|मळमळ|ulti|vomit|nausea'));
+  final hasDiarrhoea = has(RegExp(r'जुलाब|पातळ शौच|loose motion|diarrh|गॅस्ट्रो|gastro|अतिसार|পাতলা শৌচ|ডায়েৰিয়া|পাতলা পায়খানা|ডায়রিয়া|दस्त'));
+  final hasCholera = has(RegExp(r'कॉलरा|पटकी|cholera|patki|भाताच्या पेज|কলেৰা|পটকী|কলেরা|हैजा'));
+  final hasBloodStool = !has(RegExp(r'रक्त नाही|no blood|তেজ নাই|রক্ত নেই|खून नहीं')) && has(RegExp(r'शौचात रक्त|रक्त पड|आमांश|आव पड|dysentery|blood in stool|শৌচত তেজ|মলে রক্ত|मल में खून'));
+  final hasJaundice = has(RegExp(r'कावीळ|काविळ|पिवळे डोळे|पिवळी लघवी|jaundice|hepatitis|यकृत|জণ্ডিচ|জন্ডিস|পিलिया|पीलिया'));
+  final hasFever = !has(RegExp(r'ताप नाही|no fever|taap nahi|জ্বৰ নাই|জ্বর নেই|बुखार नहीं')) && has(RegExp(r'ताप|थंडी वाजून|टायफॉइड|विषमज्वर|डेंग्यू|मलेरिया|fever|typhoid|malaria|dengue|জ্বৰ|জ্বর|বুखार|बुखार'));
+  final hasAbdominalPain = has(RegExp(r'पोटदुखी|पोट दुख|पोटात दुख|पोटात कळ|पोटात गोळा|अॅसिडिटी|जंत|potdukhi|stomach pain|abdominal pain|gastritis|পেটৰ বিষ|পেট বিষ|পেটে ব্যথা|পেটব্যথা|पेट दर्द'));
+  final hasVomiting = has(RegExp(r'उलट्या|उलटी|मळमळ|ulti|vomit|nausea|বমি|ওকালি|उल्टी'));
 
   String diseaseLabel = '';
   final considerations = <DoctorConsideration>[];

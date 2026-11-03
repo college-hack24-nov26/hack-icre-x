@@ -107,20 +107,35 @@ flutter build apk --release -t voice_module/example_main.dart
 
 ## 🌟 Key Features
 
-1. **Multilingual Speech-to-Text**:
-   - Marathi (`mr-IN`) and English (`en-IN`) live transcription.
-   - Built-in live audio pulse waveform animation.
+1. **🌐 Northeast India Multilingual Voice & AI Model Drop Down Menu**:
+   - Designed specifically for **ASHA workers, ANMs, PHC Medical Officers, and village users** across Northeast India.
+   - Prominent **Dropdown Menu** in the Top Bar and Voice Card for 1-tap language switching.
+   - **Supported Languages & Regional Coverage**:
+     - 🌾 **Assamese (`অসমীয়া` · `as_IN`)**: Most spoken native language in Northeast India (15M+ speakers), critical *lingua franca* across Assam, Arunachal Pradesh, and Nagaland borders.
+     - 🌊 **Bengali (`বাংলা` · `bn_IN`)**: Highest overall numbers across multiple states: Tripura, Assam (Barak Valley), Meghalaya, and Mizoram.
+     - 🇮🇳 **Hindi (`हिंदी` · `hi_IN`)**: Inter-state link language across Arunachal Pradesh and urban health centers.
+     - 🇬🇧 **English (`English` · `en_IN`)**: Official administrative & health language in Nagaland, Meghalaya, and Mizoram.
+     - 🏔️ **Manipuri / Meitei (`মৈতৈলোন্` · `mni_IN`)**: Manipur state official language.
+     - 🌿 **Bodo (`बर'` · `brx_IN`)**: Bodoland Territorial Region (BTR, Assam).
+     - ⛰️ **Mizo (`Mizo ṭawng` · `lus_IN`)**: Mizoram state official language.
+     - 🚩 **Marathi (`मराठी` · `mr_IN`)**: Western India compatibility.
+   - **Quick-switch chips** for the top 4 languages (`অসমীয়া`, `বাংলা`, `हिंदी`, `English`) plus full dropdown for all 8 states.
+   - Dynamic localized voice hints, example transcripts, danger sign labels, and water contamination triage guidance.
 
-2. **Dual-Engine Clinical Extraction**:
-   - **Primary Engine**: Google Gemini Flash (structured JSON output for symptoms, severity, risk scores).
-   - **Fallback Engine**: Local rule-based regex parser running completely offline — 0 external network required.
+2. **Multilingual Speech-to-Text**:
+   - Dynamically binds STT locale to the selected language (`as_IN`, `bn_IN`, `hi_IN`, `en_IN`, `mr_IN`).
+   - Built-in live audio pulse waveform animation and speech dictation loop.
 
-3. **Clinical Triage & Doctor Consult**:
-   - Evaluates dehydration risk (mild, moderate, severe).
-   - Generates recommended treatment plans (ORS, Zinc, IV referral).
-   - Forward cases to doctor queue with priority flags.
+3. **Dual-Engine Clinical Extraction**:
+   - **Primary Engine**: Google Gemini Flash tailored for Northeast India PHC epidemiology (structured JSON output for symptoms, severity, risk scores, localized risk explanations).
+   - **Fallback Engine**: Local rule-based regex parser with Assamese, Bengali, Devanagari, and English numeral normalizers and clinical vocabulary running 100% offline.
 
-4. **Offline Persistence**:
+4. **Clinical Triage & Doctor Consult**:
+   - Evaluates water contamination risk (cholera, hepatitis/jaundice, typhoid, dysentery).
+   - Generates recommended treatment plans (ORS, Zinc, boiling protocols, IV referral).
+   - Forward cases to doctor queue with priority flags (Urgent / Normal).
+
+5. **Offline Persistence**:
    - Saves all recorded and edited cases locally in `SharedPreferences`.
    - Allows filtering by all cases, danger cases, or doctor-forwarded cases.
 

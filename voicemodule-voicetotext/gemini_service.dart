@@ -23,27 +23,48 @@ class GeminiService {
   static Future<VoiceExtraction> extract(
     String transcript, {
     String? villageHint,
-    bool mr = true,
+    bool mr = false,
+    String lang = 'as',
   }) async {
     final apiKey = await getApiKey();
 
+    final String activeLang = (mr == true && lang == 'as') ? 'mr' : lang;
+    String targetLangName;
+    switch (activeLang) {
+      case 'as': targetLangName = 'Assamese'; break;
+      case 'bn': targetLangName = 'Bengali'; break;
+      case 'hi': targetLangName = 'Hindi'; break;
+      case 'mr': targetLangName = 'Marathi'; break;
+      case 'mni': targetLangName = 'Manipuri'; break;
+      case 'brx': targetLangName = 'Bodo'; break;
+      case 'lus': targetLangName = 'Mizo'; break;
+      case 'en':
+      default: targetLangName = 'English'; break;
+    }
+
     final systemInstruction = '''
-You are an expert clinical epidemiology and triage system for rural Primary Health Centres (PHCs) in Maharashtra, India.
-Transcribe and extract structured clinical fields from this spoken Marathi / Hindi / English transcript into a JSON object.
+You are an expert clinical epidemiology and triage system for rural Primary Health Centres (PHCs) and Sub-Centres across Northeast India (Assam, Meghalaya, Tripura, Arunachal Pradesh, Manipur, Nagaland, Mizoram, Sikkim).
+Transcribe and extract structured clinical fields from this spoken transcript into a JSON object. The speaker may speak in Assamese, Bengali, Hindi, English, Marathi, or mixed Northeast regional dialects (e.g. Nagamese, Sylheti, Bodo).
 
 RULES:
 1. ONLY extract what was explicitly stated or clearly implied by the patient/ASHA worker. If not mentioned, set the field to null.
-2. Normalise all number words to numeric digits (e.g. "एक"=1, "दोन"=2, "तीन"=3, "चार"=4, "पाच"=5, "सहा"=6, "सात"=7, "आठ"=8, "नऊ"=9, "दहा"=10, "वीस"=20, "बावीस"=22, "बत्तीस"=32).
+2. Normalise all number words to numeric digits:
+   - Assamese/Bengali: "এক"=1, "দুই"=2, "তিনি"/"তিন"=3, "চাৰি"/"চার"=4, "পাঁচ"=5, "ছয়"=6, "সাত"=7, "আঠ"/"আট"=8, "ন"/"নয়"=9, "দহ"/"দশ"=10, "বিশ"=20, "পঁচিশ"=25, "ত্ৰিশ"/"তিরিশ"=30.
+   - Devanagari/Hindi/Marathi: "एक"=1, "दोन"/"दो"=2, "तीन"=3, "चार"=4, "पाच"/"पाँच"=5, "सहा"/"छह"=6, "सात"=7, "आठ"=8, "नऊ"/"नौ"=9, "दहा"/"दस"=10.
 3. "symptoms" must be a list containing ONLY applicable keys from this vocabulary:
    - "diarrhoea", "vomiting", "fever", "typhoid", "jaundice", "cholera", "gastro", "abdominal_pain", "weakness", "thirst", "sunken_eyes", "blood_in_stool".
-   - Note: If patient has "पोट दुखी" or "पोटदुखी", map to "abdominal_pain".
-   - If patient has "जुलाब" or "पातळ संडास", map to "diarrhoea".
-   - If patient has "उलटी" or "उलट्या", map to "vomiting".
-   - If patient has "ताप", map to "fever".
+   - Key multilingual mappings:
+     - Assamese "পেটৰ বিষ" / Bengali "পেটে ব্যথা" / Marathi "पोटदुखी" / Hindi "पेट दर्द" -> "abdominal_pain"
+     - Assamese "পাতলা শৌচ", "ডায়েৰিয়া", "পেট চলা" / Bengali "পাতলা পায়খানা", "ডায়রিয়া" / Marathi "जुलाब" / Hindi "दस्त" -> "diarrhoea"
+     - Assamese/Bengali "বমি" / Marathi "उलटी" / Hindi "उल्टी" -> "vomiting"
+     - Assamese "জ্বৰ" / Bengali "জ্বর" / Marathi "ताप" / Hindi "बुखार" -> "fever"
+     - Assamese "শৌচত তেজ" / Bengali "মলে রক্ত" / Marathi "शौचात रक्त" / Hindi "शौच में खून" -> "blood_in_stool"
+     - Assamese "জণ্ডিচ" / Bengali "জন্ডিস" / Marathi "कावीळ" / Hindi "पीलिया" -> "jaundice"
+     - Assamese "কলেৰা", "পটকী" / Bengali "কলেরা" / Marathi "कॉलरा" / Hindi "हैजा" -> "cholera"
 4. Evaluate water-borne outbreak risk:
    - "isWaterBorne": true if symptoms include diarrhoea, vomiting, cholera, jaundice, gastro, or typhoid.
    - "waterRiskPercent": integer between 10 and 95 based on severity (e.g. 80-95 for cholera/blood in stool/sunken eyes, 50-75 for fever+diarrhoea, 20-40 for mild abdominal pain).
-   - "waterRiskReason": concise explanation in ${mr ? 'Marathi' : 'English'}.
+   - "waterRiskReason": concise explanation in $targetLangName (patient / ASHA worker selected language).
 5. Return JSON ONLY with the exact schema:
 {
   "transcript": string,
@@ -130,18 +151,19 @@ Extract into JSON:
 
     if (parsedJson == null) {
       debugPrint('Gemini extraction failed, using fallback heuristic parser');
-      return _buildFallbackExtraction(transcript, villageHint, mr);
+      return _buildFallbackExtraction(transcript, villageHint, mr, activeLang);
     }
 
-    return _buildVoiceExtractionFromJson(parsedJson, transcript, usedModel, villageHint);
+    return _buildVoiceExtractionFromJson(parsedJson, transcript, usedModel, villageHint, activeLang);
   }
 
   static VoiceExtraction _buildVoiceExtractionFromJson(
     Map<String, dynamic> j,
     String originalTranscript,
     String model,
-    String? villageHint,
-  ) {
+    String? villageHint, [
+    String activeLang = 'as',
+  ]) {
     VField<T> makeField<T>(dynamic val, {double conf = 0.95}) {
       if (val == null) {
         return VField<T>(value: null, conf: 0.0, status: 'missing');
@@ -154,37 +176,78 @@ Extract into JSON:
       );
     }
 
-    // Symptom vocabulary mapping
+    // Symptom vocabulary mapping (Supports Assamese, Bengali, Hindi, English, Marathi)
     final symptomMapping = {
       'abdominal_pain': 'abdominal_pain',
       'पोटदुखी': 'abdominal_pain',
       'पोट दुखी': 'abdominal_pain',
       'stomach pain': 'abdominal_pain',
+      'পেটৰ বিষ': 'abdominal_pain',
+      'পেটে ব্যথা': 'abdominal_pain',
+      'পেটব্যথা': 'abdominal_pain',
+      'पेट दर्द': 'abdominal_pain',
       'diarrhoea': 'diarrhoea',
       'diarrhea': 'diarrhoea',
       'जुलाब': 'diarrhoea',
       'पातळ शौच': 'diarrhoea',
+      'পাতলা শৌচ': 'diarrhoea',
+      'ডায়েৰিয়া': 'diarrhoea',
+      'পাতলা পায়খানা': 'diarrhoea',
+      'ডায়রিয়া': 'diarrhoea',
+      'दस्त': 'diarrhoea',
       'vomiting': 'vomiting',
       'उलट्या': 'vomiting',
       'उलटी': 'vomiting',
+      'उल्टी': 'vomiting',
+      'বমি': 'vomiting',
+      'ওকালি': 'vomiting',
       'fever': 'fever',
       'ताप': 'fever',
+      'बुखार': 'fever',
+      'জ্বৰ': 'fever',
+      'জ্বর': 'fever',
       'typhoid': 'typhoid',
       'टायफॉइड': 'typhoid',
       'टायफॉईड': 'typhoid',
+      'टाइफाइड': 'typhoid',
+      'টাইফয়েড': 'typhoid',
+      'টাইফয়েড': 'typhoid',
       'jaundice': 'jaundice',
       'कावीळ': 'jaundice',
+      'पीलिया': 'jaundice',
+      'জণ্ডিচ': 'jaundice',
+      'জন্ডিস': 'jaundice',
       'cholera': 'cholera',
       'कॉलरा': 'cholera',
+      'हैजा': 'cholera',
+      'কলেৰা': 'cholera',
+      'পটকী': 'cholera',
+      'কলেরা': 'cholera',
       'gastro': 'gastro',
       'गॅस्ट्रो': 'gastro',
+      'गैस्ट्रो': 'gastro',
+      'গেষ্ট্ৰো': 'gastro',
+      'গ্যাস্ট্রো': 'gastro',
       'weakness': 'weakness',
       'अशक्तपणा': 'weakness',
+      'कमजोरी': 'weakness',
+      'দুৰ্বলতা': 'weakness',
+      'দুর্বলতা': 'weakness',
       'thirst': 'thirst',
       'तहान': 'thirst',
+      'পিয়াহ': 'thirst',
+      'তৃষ্ণা': 'thirst',
+      'प्यास': 'thirst',
       'sunken_eyes': 'sunken_eyes',
+      'डोळे खोल': 'sunken_eyes',
+      'চকু সোমাই যোৱা': 'sunken_eyes',
+      'চোখ বসে যাওয়া': 'sunken_eyes',
       'blood_in_stool': 'blood_in_stool',
+      'शौचात रक्त': 'blood_in_stool',
       'रक्तयुक्त संडास': 'blood_in_stool',
+      'শৌচত তেজ': 'blood_in_stool',
+      'মলে রক্ত': 'blood_in_stool',
+      'मल में खून': 'blood_in_stool',
     };
 
     final symList = <String>[];
@@ -217,8 +280,8 @@ Extract into JSON:
 
     String? patientName = j['patientName'] as String?;
     if (patientName == null || patientName.isEmpty) {
-      // Heuristic fallback for Marathi name
-      final nameMatch = RegExp(r'(?:नाव|name\s*is)\s*[:=]?\s*([^\n,]+?)(?=\s+वय|\s+गाव|\s+दोन|\s+\d|$)').firstMatch(originalTranscript);
+      // Heuristic fallback for multilingual name (Assamese, Bengali, Hindi, English, Marathi)
+      final nameMatch = RegExp(r'(?:नाव|name\s*is|নাম|নাম\s*হৈছে|নাম\s*হলো|नाम|नाम\s*है)\s*[:=]?\s*([^\n,]+?)(?=\s+वय|\s+गाव|\s+दोन|\s+\d|\s+বয়স|\s+গাঁও|\s+গ্রাম|\s+उम्र|\s+age|$)').firstMatch(originalTranscript);
       if (nameMatch != null) {
         patientName = nameMatch.group(1)?.trim();
       }
@@ -226,7 +289,7 @@ Extract into JSON:
 
     int? ageYears = j['ageYears'] is num ? (j['ageYears'] as num).toInt() : null;
     if (ageYears == null) {
-      final ageMatch = RegExp(r'(?:वय|age)\s*[:=]?\s*(\d+)').firstMatch(originalTranscript);
+      final ageMatch = RegExp(r'(?:वय|age|বয়স|বয়স|উম্ৰ|उम्र)\s*[:=]?\s*(\d+)').firstMatch(originalTranscript);
       if (ageMatch != null) {
         ageYears = int.tryParse(ageMatch.group(1)!);
       }
@@ -234,14 +297,14 @@ Extract into JSON:
 
     int? durationDays = j['durationDays'] is num ? (j['durationDays'] as num).toInt() : null;
     if (durationDays == null) {
-      final daysMatch = RegExp(r'(\d+)\s*(?:दिवसा|दिवस|days)').firstMatch(originalTranscript);
+      final daysMatch = RegExp(r'(\d+)\s*(?:दिवसा|दिवस|days|দিন|दिन)').firstMatch(originalTranscript);
       if (daysMatch != null) {
         durationDays = int.tryParse(daysMatch.group(1)!);
-      } else if (originalTranscript.contains('दोन दिवसा')) {
+      } else if (originalTranscript.contains('दोन दिवसा') || originalTranscript.contains('দুদিন') || originalTranscript.contains('দুই দিন') || originalTranscript.contains('दो दिन')) {
         durationDays = 2;
-      } else if (originalTranscript.contains('तीन दिवसा')) {
+      } else if (originalTranscript.contains('तीन दिवसा') || originalTranscript.contains('তিনি দিন') || originalTranscript.contains('তিন দিন') || originalTranscript.contains('तीन दिन')) {
         durationDays = 3;
-      } else if (originalTranscript.contains('एक दिवसा') || originalTranscript.contains('एका दिवसा')) {
+      } else if (originalTranscript.contains('एक दिवसा') || originalTranscript.contains('একা दिवसा') || originalTranscript.contains('এদিন') || originalTranscript.contains('এক দিন') || originalTranscript.contains('एक दिन')) {
         durationDays = 1;
       }
     }
@@ -255,7 +318,7 @@ Extract into JSON:
         (symList.contains('diarrhoea') || symList.contains('cholera') || symList.contains('gastro'));
     final riskPercent = j['waterRiskPercent'] is num ? (j['waterRiskPercent'] as num).toInt() : (isWater ? 60 : 25);
     final riskReason = j['waterRiskReason'] as String? ??
-        (isWater ? 'दूषित पाण्यामुळे होणाऱ्या जलजन्य संसर्गाची लक्षणे आढळली.' : 'सध्या कमी धोका - लक्षणे सौम्य आहेत.');
+        (isWater ? (activeLang == 'as' ? 'দূষিত পানীৰ ফলত হোৱা জলজনিত সংক্ৰমণৰ লক্ষণ পোৱা গৈছে।' : activeLang == 'bn' ? 'দূষিত জলবাহিত সংক্রমণের স্পষ্ট লক্ষণ পাওয়া গেছে।' : activeLang == 'hi' ? 'दूषित पानी से होने वाले जलजन्य संक्रमण के लक्षण पाए गए।' : 'Water-borne clinical infection indicators detected.') : 'Low water contamination risk detected.');
 
     final ext = VoiceExtraction(
       transcript: originalTranscript,
@@ -291,26 +354,27 @@ Extract into JSON:
     return ext;
   }
 
-  static VoiceExtraction _buildFallbackExtraction(String text, String? villageHint, bool mr) {
-    final local = LocalExtractor.extract(text);
-    // Overlay regex for marathi name, age, days if local missed
-    final nameMatch = RegExp(r'(?:नाव|name\s*is)\s*[:=]?\s*([^\n,]+?)(?=\s+वय|\s+गाव|\s+दोन|\s+\d|$)').firstMatch(text);
+  static VoiceExtraction _buildFallbackExtraction(String text, String? villageHint, bool mr, [String lang = 'as']) {
+    final activeLang = (mr == true && lang == 'as') ? 'mr' : lang;
+    final local = LocalExtractor.extract(text, lang: activeLang);
+    // Overlay regex for name, age, days if local missed
+    final nameMatch = RegExp(r'(?:नाव|name\s*is|নাম|নাম\s*হৈছে|नाम)\s*[:=]?\s*([^\n,]+?)(?=\s+वय|\s+गाव|\s+দोन|\s+\d|\s+বয়স|\s+গাঁও|\s+গ্রাম|\s+उम्र|$)').firstMatch(text);
     if (nameMatch != null && (local.patientName.value == null || local.patientName.value!.isEmpty)) {
       local.patientName.value = nameMatch.group(1)?.trim();
       local.patientName.status = 'ok';
     }
 
-    final ageMatch = RegExp(r'(?:वय|age)\s*[:=]?\s*(\d+)').firstMatch(text);
+    final ageMatch = RegExp(r'(?:वय|age|বয়স|বয়স|উম্ৰ|उम्र)\s*[:=]?\s*(\d+)').firstMatch(text);
     if (ageMatch != null && local.ageYears.value == null) {
       local.ageYears.value = int.tryParse(ageMatch.group(1)!);
       local.ageYears.status = 'ok';
     }
 
-    final daysMatch = RegExp(r'(\d+)\s*(?:दिवसा|दिवस|days)').firstMatch(text);
+    final daysMatch = RegExp(r'(\d+)\s*(?:दिवसा|दिवस|days|দিন|दिन)').firstMatch(text);
     if (daysMatch != null && local.durationDays.value == null) {
       local.durationDays.value = int.tryParse(daysMatch.group(1)!);
       local.durationDays.status = 'ok';
-    } else if (text.contains('दोन दिवसा') && local.durationDays.value == null) {
+    } else if ((text.contains('दोन दिवसा') || text.contains('দুদিন') || text.contains('দুই দিন') || text.contains('दो दिन')) && local.durationDays.value == null) {
       local.durationDays.value = 2;
       local.durationDays.status = 'ok';
     }
