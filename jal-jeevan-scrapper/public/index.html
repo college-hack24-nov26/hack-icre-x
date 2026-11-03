@@ -1991,26 +1991,33 @@
           const card = document.createElement('div');
           card.className = 'border border-slate-200 rounded-2xl overflow-hidden shadow-sm bg-white hover:shadow transition';
 
-          const disState = sc.diagram.disinfectionStatus.toLowerCase();
+          const dgm = sc.diagram || {
+            sourceCount: sc.sourceCount || 1,
+            treatmentPlantCount: sc.treatPlant || sc.treatmentPlantCount || 1,
+            storageReservoirCount: sc.storage || sc.storageReservoirCount || 1,
+            disinfectionStatus: sc.disinfection || 'Present',
+            fhtcProvided: sc.fhtcProvided || 0
+          };
+          const disState = (dgm.disinfectionStatus || 'Present').toLowerCase();
           const isDisPresent = disState.includes('present') && !disState.includes('not');
 
           card.innerHTML = `
             <!-- Scheme Header -->
             <div class="bg-gradient-to-r from-blue-700 to-sky-700 px-5 py-3 text-white flex flex-wrap items-center justify-between gap-2">
               <div class="flex items-center gap-3">
-                <span class="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center font-bold text-sm shadow-inner">${sc.schemeIndex}</span>
+                <span class="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center font-bold text-sm shadow-inner">${sc.schemeIndex || 1}</span>
                 <div>
                   <div class="text-xs">
                     Scheme Id : 
                     <a href="${sc.schemeLink || 'javascript:void(0)'}" target="_blank" class="font-bold underline hover:text-sky-200">
-                      ${sc.schemeId} <span class="text-[11px] font-normal">[ Click to view ]</span>
+                      ${sc.schemeId || 'N/A'} <span class="text-[11px] font-normal">[ Click to view ]</span>
                     </a>
                   </div>
-                  <div class="text-xs font-semibold mt-0.5">Scheme Name : <span class="font-bold text-cyan-200">${sc.schemeName}</span></div>
+                  <div class="text-xs font-semibold mt-0.5">Scheme Name : <span class="font-bold text-cyan-200">${sc.schemeName || 'PWS Scheme'}</span></div>
                 </div>
               </div>
               <span class="text-[11px] px-2.5 py-1 rounded bg-white/20 font-semibold uppercase tracking-wider backdrop-blur">
-                Scheme Type : ${sc.schemeType}
+                Scheme Type : ${sc.schemeType || 'PWS'}
               </span>
             </div>
 
@@ -2024,7 +2031,7 @@
                     <i class="fa-solid fa-water"></i>
                   </div>
                   <span class="text-xs font-semibold text-slate-700">Source</span>
-                  <span class="text-xs font-black text-slate-900 mt-0.5">${sc.diagram.sourceCount}</span>
+                  <span class="text-xs font-black text-slate-900 mt-0.5">${dgm.sourceCount}</span>
                 </div>
 
                 <!-- 2. Treatment Plant -->
@@ -2033,7 +2040,7 @@
                     <i class="fa-solid fa-filter"></i>
                   </div>
                   <span class="text-xs font-semibold text-slate-700">Treatment</span>
-                  <span class="text-xs font-black text-slate-900 mt-0.5">${sc.diagram.treatmentPlantCount}</span>
+                  <span class="text-xs font-black text-slate-900 mt-0.5">${dgm.treatmentPlantCount}</span>
                 </div>
 
                 <!-- 3. Storage -->
@@ -2042,7 +2049,7 @@
                     <i class="fa-solid fa-warehouse"></i>
                   </div>
                   <span class="text-xs font-semibold text-slate-700">Storage</span>
-                  <span class="text-xs font-black text-slate-900 mt-0.5">${sc.diagram.storageReservoirCount}</span>
+                  <span class="text-xs font-black text-slate-900 mt-0.5">${dgm.storageReservoirCount}</span>
                 </div>
 
                 <!-- 4. Disinfection -->
@@ -2051,7 +2058,7 @@
                     <i class="fa-solid fa-pump-medical"></i>
                   </div>
                   <span class="text-xs font-semibold text-slate-700">Disinfection</span>
-                  <span class="text-[11px] font-bold ${isDisPresent ? 'text-emerald-600' : 'text-slate-400'} mt-0.5">${sc.diagram.disinfectionStatus}</span>
+                  <span class="text-[11px] font-bold ${isDisPresent ? 'text-emerald-600' : 'text-slate-400'} mt-0.5">${dgm.disinfectionStatus}</span>
                 </div>
 
                 <!-- 5. FHTC Provided -->
@@ -2060,7 +2067,7 @@
                     <i class="fa-solid fa-house-chimney-window"></i>
                   </div>
                   <span class="text-xs font-semibold text-slate-700">FHTC Provided</span>
-                  <span class="text-xs font-black text-teal-800 mt-0.5">${sc.diagram.fhtcProvided.toLocaleString()}</span>
+                  <span class="text-xs font-black text-teal-800 mt-0.5">${(dgm.fhtcProvided || 0).toLocaleString()}</span>
                 </div>
 
               </div>

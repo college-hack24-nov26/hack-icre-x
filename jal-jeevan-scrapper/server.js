@@ -212,11 +212,19 @@ function buildDynamicVillageMetrics(state, district, block, village) {
       schemeId: `${distCode}-PWS-${100 + (seed % 899)}`,
       schemeName: `Retrofitting to Piped Water Supply Scheme for ${cleanVill}`,
       schemeType: 'Single Village Scheme (SVS)',
+      schemeLink: '',
       sourceCount: 1 + (seed % 2),
       treatPlant: 1,
       storage: 1,
       disinfection: 'Present',
       fhtcProvided: tapHh,
+      diagram: {
+        sourceCount: 1 + (seed % 2),
+        treatmentPlantCount: 1,
+        storageReservoirCount: 1,
+        disinfectionStatus: 'Present',
+        fhtcProvided: tapHh,
+      },
       sources: [
         { sourceName: `Deep Tube Well / Borewell (${cleanVill})`, type: 'Ground Water' }
       ],
@@ -238,11 +246,19 @@ function buildDynamicVillageMetrics(state, district, block, village) {
       schemeId: `${distCode}-SOLAR-${200 + (seed % 799)}`,
       schemeName: `Solar Dual Pump Water Supply Scheme (${cleanVill} Wadi)`,
       schemeType: 'Mini PWS / Solar Dual Pump',
+      schemeLink: '',
       sourceCount: 1,
       treatPlant: 0,
       storage: 1,
       disinfection: 'Present',
       fhtcProvided: Math.round(tapHh * 0.25),
+      diagram: {
+        sourceCount: 1,
+        treatmentPlantCount: 0,
+        storageReservoirCount: 1,
+        disinfectionStatus: 'Present',
+        fhtcProvided: Math.round(tapHh * 0.25),
+      },
       sources: [{ sourceName: 'Solar Powered Borewell', type: 'Ground Water' }],
       treatmentPlants: [],
       storageTanks: [{ tankName: 'Solar HDPE Tank (5000L)', capacity: '5,000 Litres' }],
@@ -291,13 +307,39 @@ function buildDynamicVillageMetrics(state, district, block, village) {
       bacteriologicalValue: 0,
       remedialActionTaken: 'Potable water fully complies with BIS 10500 drinking standards',
       chemicalTests: [
-        { parameter: 'pH', result: (7.1 + ((seed % 8) / 10)).toFixed(1), bisAcceptable: '6.5 - 8.5', bisPermissible: 'No Relaxation' },
-        { parameter: 'Total Dissolved Solids (TDS)', result: `${280 + (seed % 140)} mg/l`, bisAcceptable: '500 mg/l', bisPermissible: '2000 mg/l' },
-        { parameter: 'Turbidity', result: `${(1.1 + ((seed % 8) / 10)).toFixed(1)} NTU`, bisAcceptable: '1.0 NTU', bisPermissible: '5.0 NTU' },
-        { parameter: 'Chlorides', result: `${65 + (seed % 60)} mg/l`, bisAcceptable: '250 mg/l', bisPermissible: '1000 mg/l' },
-        { parameter: 'Nitrate', result: `${12 + (seed % 15)} mg/l`, bisAcceptable: '45 mg/l', bisPermissible: 'No Relaxation' },
-        { parameter: 'Fluoride', result: `${(0.4 + ((seed % 5) / 10)).toFixed(1)} mg/l`, bisAcceptable: '1.0 mg/l', bisPermissible: '1.5 mg/l' }
+        { parameterName: 'pH', testResult: (7.1 + ((seed % 8) / 10)).toFixed(1), bisAcceptableLimit: '6.5 - 8.5', bisPermissibleLimit: 'No Relaxation' },
+        { parameterName: 'Total Dissolved Solids (TDS)', testResult: `${280 + (seed % 140)} mg/l`, bisAcceptableLimit: '500 mg/l', bisPermissibleLimit: '2000 mg/l' },
+        { parameterName: 'Turbidity', testResult: `${(1.1 + ((seed % 8) / 10)).toFixed(1)} NTU`, bisAcceptableLimit: '1.0 NTU', bisPermissibleLimit: '5.0 NTU' },
+        { parameterName: 'Chlorides', testResult: `${65 + (seed % 60)} mg/l`, bisAcceptableLimit: '250 mg/l', bisPermissibleLimit: '1000 mg/l' },
+        { parameterName: 'Nitrate', testResult: `${12 + (seed % 15)} mg/l`, bisAcceptableLimit: '45 mg/l', bisPermissibleLimit: 'No Relaxation' },
+        { parameterName: 'Fluoride', testResult: `${(0.4 + ((seed % 5) / 10)).toFixed(1)} mg/l`, bisAcceptableLimit: '1.0 mg/l', bisPermissibleLimit: '1.5 mg/l' }
       ],
+      bacteriologicalTests: [
+        { parameterName: 'Fecal Coliform / E. coli', testResult: '0 MPN/100ml (Safe)', bisAcceptableLimit: '0 / 100 ml', bisPermissibleLimit: 'No Relaxation' }
+      ],
+      laboratorySampleDetails: {
+        summary: {
+          totalTested: labSamples,
+          samplesSafe: labSamples,
+          samplesUnsafe: 0,
+          remedialActionTaken: 0,
+        },
+        records: [
+          { sNo: 1, testingDate: '24/10/2026', testType: 'Bacteriological (E. coli)', status: 'Safe', remedialAction: 'Nil', location: `${cleanVill} Source` },
+          { sNo: 2, testingDate: '18/10/2026', testType: 'Chemical (Physico-Chemical)', status: 'Safe', remedialAction: 'Nil', location: `${cleanVill} School Tap` }
+        ]
+      },
+      sourceQualityCharts: {
+        sources: [
+          { sourceId: `SRC-${100 + (seed % 899)}`, sourceName: `Main Deep Borewell (${cleanVill})`, habitationName: cleanVill }
+        ],
+        parameters: {
+          ph: [{ date: '01 Oct 2026', value: 7.2 }, { date: '15 Oct 2026', value: 7.4 }],
+          turbidity: [{ date: '01 Oct 2026', value: 1.2 }, { date: '15 Oct 2026', value: 1.4 }],
+          tds: [{ date: '01 Oct 2026', value: 310 }, { date: '15 Oct 2026', value: 330 }],
+          nitrate: [{ date: '01 Oct 2026', value: 14 }, { date: '15 Oct 2026', value: 16 }]
+        }
+      },
       nearestLaboratory: {
         name: `Sub-Divisional Water Testing Laboratory, ${cleanBlk}`,
         type: 'Sub-Divisional Public Health Testing Lab',
