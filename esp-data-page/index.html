@@ -88,14 +88,17 @@
         }
 
         header {
-            background: linear-gradient(180deg, rgba(6, 35, 61, 0.65) 0%, rgba(12, 62, 102, 0.55) 50%, rgba(2, 60, 100, 0.75) 100%),
+            background: linear-gradient(180deg, rgba(6, 35, 61, 0.45) 0%, rgba(12, 62, 102, 0.35) 50%, rgba(2, 60, 100, 0.6) 100%),
                         url('banner.png') center center / cover no-repeat;
             color: #ffffff;
-            padding: 34px 20px 38px 20px;
+            padding: 24px 20px 28px 20px;
             text-align: center;
-            box-shadow: 0 4px 25px rgba(6, 35, 61, 0.35);
+            box-shadow: 0 4px 25px rgba(6, 35, 61, 0.3);
             position: relative;
             overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         header::before {
@@ -105,90 +108,28 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: radial-gradient(circle at 50% 50%, rgba(0, 180, 216, 0.15) 0%, transparent 75%);
+            background: radial-gradient(circle at 50% 50%, rgba(0, 180, 216, 0.12) 0%, transparent 75%);
             pointer-events: none;
         }
 
-        .header-brand-wrap {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
+        .header-app-logo {
+            height: 115px;
+            max-width: 90%;
+            object-fit: contain;
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+            filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.5));
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
             position: relative;
             z-index: 1;
-            text-align: left;
-            background: rgba(6, 35, 61, 0.42);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 12px 26px;
-            border-radius: 26px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        }
-
-        .header-app-logo {
-            height: 72px;
-            width: 72px;
-            object-fit: cover;
-            border-radius: 50%;
-            background: #ffffff;
-            padding: 2px;
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), 0 0 0 3px rgba(255, 255, 255, 0.4);
-            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            flex-shrink: 0;
+            display: block;
+            margin: 0 auto;
         }
 
         .header-app-logo:hover {
-            transform: scale(1.08) rotate(4deg);
-        }
-
-        .header-title-box {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .brand-h1-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .brand-title {
-            font-family: var(--font-heading);
-            font-size: 38px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            margin: 0;
-            line-height: 1.1;
-            color: #ffffff;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-        }
-
-        .brand-version-badge {
-            background: rgba(255, 255, 255, 0.22);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            color: #ffffff;
-            font-size: 11px;
-            font-weight: 700;
-            padding: 4px 12px;
-            border-radius: 20px;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        }
-
-        .brand-subtitle {
-            font-size: 14px;
-            color: #e0f2fe;
-            font-weight: 500;
-            margin-top: 5px;
-            letter-spacing: 0.2px;
-            text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+            transform: scale(1.04);
         }
 
         .container {
@@ -1233,28 +1174,11 @@
 
         @media (max-width: 640px) {
             header {
-                padding: 24px 14px 28px 14px;
-            }
-
-            .header-brand-wrap {
-                flex-direction: column;
-                text-align: center;
-                gap: 12px;
-                padding: 14px 18px;
-                border-radius: 20px;
-            }
-
-            .brand-title {
-                font-size: 28px;
+                padding: 16px 12px 22px 12px;
             }
 
             .header-app-logo {
-                height: 60px;
-                width: 60px;
-            }
-
-            .brand-h1-row {
-                justify-content: center;
+                height: 85px;
             }
 
             .sensor-value {
@@ -1299,16 +1223,7 @@
 <body>
 
     <header>
-        <div class="header-brand-wrap">
-            <img src="app-logo.png" alt="JalSanket Logo" class="header-app-logo">
-            <div class="header-title-box">
-                <div class="brand-h1-row">
-                    <h1 class="brand-title">JalSanket</h1>
-                    <span class="brand-version-badge"><i class="fa-solid fa-droplet"></i> IoT Water Station</span>
-                </div>
-                <p class="brand-subtitle">Smart Water Quality Monitoring &amp; Precision Chlorination System</p>
-            </div>
-        </div>
+        <img src="app-logo.png" alt="JalSanket" class="header-app-logo">
     </header>
 
     <div class="container">
