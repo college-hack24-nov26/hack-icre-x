@@ -1,0 +1,151 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "SENSOR_DATA": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role === 'device' || auth.token.role === 'admin')",
+      ".validate": "newData.hasChildren(['Heartbeat', 'UptimeSec']) && newData.child('Heartbeat').isNumber() && newData.child('UptimeSec').isNumber()"
+    },
+
+    "TEST_STATUS": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role === 'device' || auth.token.role === 'water_operator' || auth.token.role === 'admin')",
+      ".validate": "newData.hasChild('state') && newData.child('state').isString() && (newData.child('state').val() === 'IDLE' || newData.child('state').val() === 'RUNNING' || newData.child('state').val() === 'COMPLETED' || newData.child('state').val() === 'STOPPED' || newData.child('state').val() === 'FAILED')"
+    },
+
+    "TEST_COMMAND": {
+      ".read": "auth != null && (auth.token.role === 'device' || auth.token.role === 'admin')",
+      ".write": "auth != null && (auth.token.role === 'water_operator' || auth.token.role === 'admin')",
+      ".validate": "newData.hasChildren(['id', 'action', 'ts']) && newData.child('id').isString() && newData.child('ts').isNumber() && (newData.child('action').val() === 'START' || newData.child('action').val() === 'STOP')"
+    },
+
+    "TEST_RESULTS": {
+      ".read": "auth != null",
+      ".indexOn": ["startMs"],
+      "$testId": {
+        ".write": "auth != null && (auth.token.role === 'device' || auth.token.role === 'water_operator' || auth.token.role === 'admin')",
+        ".validate": "newData.hasChildren(['testId', 'startMs', 'endMs', 'TDS', 'Turbidity', 'Temperature', 'mode', 'waterStatus', 'chlorinationRequired', 'chlorinationStatus']) && newData.child('testId').val() === $testId && newData.child('startMs').isNumber() && newData.child('endMs').isNumber() && newData.child('TDS').isNumber() && newData.child('Turbidity').isNumber() && newData.child('Temperature').isNumber() && newData.child('chlorinationRequired').isBoolean()"
+      }
+    },
+
+    "CHLORINATION_STATUS": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role === 'device' || auth.token.role === 'admin')",
+      ".validate": "newData.hasChild('state') && newData.child('state').isString()"
+    },
+
+    "CHLORINATION_COMMAND": {
+      ".read": "auth != null && (auth.token.role === 'device' || auth.token.role === 'admin')",
+      ".write": "auth != null && (auth.token.role === 'water_operator' || auth.token.role === 'admin')",
+      ".validate": "newData.hasChildren(['id', 'action', 'ts']) && newData.child('id').isString() && newData.child('ts').isNumber() && (newData.child('action').val() === 'START' || newData.child('action').val() === 'EMERGENCY_STOP')"
+    },
+
+    "DEVICE_COMMAND": {
+      ".read": "auth != null && (auth.token.role === 'device' || auth.token.role === 'admin')",
+      "$pushId": {
+        ".write": "auth != null && (auth.token.role === 'water_operator' || auth.token.role === 'admin')",
+        ".validate": "newData.hasChildren(['CommandId', 'Command', 'Status', 'RequestedAt']) && newData.child('CommandId').isString() && newData.child('RequestedAt').isNumber()"
+      }
+    },
+
+    "CONFIG": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role === 'water_operator' || auth.token.role === 'admin')",
+      ".validate": "newData.hasChildren(['tdsMax', 'turbidityMax', 'maxDoseMl']) && newData.child('tdsMax').isNumber() && newData.child('tdsMax').val() >= 0 && newData.child('turbidityMax').isNumber() && newData.child('turbidityMax').val() >= 0 && newData.child('maxDoseMl').isNumber() && newData.child('maxDoseMl').val() >= 0"
+    },
+
+    "SCHEDULE": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role === 'water_operator' || auth.token.role === 'admin')",
+      ".validate": "newData.hasChildren(['enabled', 'time']) && newData.child('enabled').isBoolean() && newData.child('time').isString()"
+    },
+
+    "SCHEDULE_STATE": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role === 'device' || auth.token.role === 'admin')"
+    },
+
+    "userProfiles": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || auth.token.role === 'admin')",
+        ".write": "auth != null && auth.token.role === 'admin'",
+        ".validate": "newData.hasChildren(['displayName', 'role']) && newData.child('displayName').isString() && newData.child('role').isString()"
+      }
+    },
+
+    "villages": {
+      ".read": "auth != null",
+      "$villageId": {
+        ".write": "auth != null && (auth.token.role === 'gram_sevak' || auth.token.role === 'admin')"
+      }
+    },
+
+    "waterSources": {
+      ".read": "auth != null",
+      "$sourceId": {
+        ".write": "auth != null && (auth.token.role === 'water_operator' || auth.token.role === 'gram_sevak' || auth.token.role === 'admin')"
+      }
+    },
+
+    "iotNodes": {
+      ".read": "auth != null",
+      "$nodeId": {
+        ".write": "auth != null && auth.token.role === 'admin'"
+      }
+    },
+
+    "patients": {
+      ".read": "auth != null && (auth.token.role === 'asha_worker' || auth.token.role === 'medical_officer' || auth.token.role === 'admin')",
+      "$patientId": {
+        ".write": "auth != null && (auth.token.role === 'asha_worker' || auth.token.role === 'medical_officer' || auth.token.role === 'admin')"
+      }
+    },
+
+    "patientCases": {
+      ".read": "auth != null && (auth.token.role === 'asha_worker' || auth.token.role === 'medical_officer' || auth.token.role === 'admin')",
+      "$caseId": {
+        ".write": "auth != null && (auth.token.role === 'asha_worker' || auth.token.role === 'medical_officer' || auth.token.role === 'admin')"
+      }
+    },
+
+    "caseIndexByVillage": {
+      ".read": "auth != null && (auth.token.role === 'asha_worker' || auth.token.role === 'medical_officer' || auth.token.role === 'admin')",
+      "$villageId": {
+        ".write": "auth != null && (auth.token.role === 'asha_worker' || auth.token.role === 'medical_officer' || auth.token.role === 'admin')"
+      }
+    },
+
+    "clinicalNotes": {
+      ".read": "auth != null && (auth.token.role === 'medical_officer' || auth.token.role === 'admin')",
+      "$caseId": {
+        "$noteId": {
+          ".write": "auth != null && (auth.token.role === 'medical_officer' || auth.token.role === 'admin')"
+        }
+      }
+    },
+
+    "fieldTasks": {
+      ".read": "auth != null",
+      "$taskId": {
+        ".write": "auth != null && (auth.token.role === 'asha_worker' || auth.token.role === 'gram_sevak' || auth.token.role === 'water_operator' || auth.token.role === 'admin')"
+      }
+    },
+
+    "weatherReports": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.role === 'admin'"
+    },
+
+    "earlyRiskAssessments": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role === 'water_operator' || auth.token.role === 'admin')"
+    },
+
+    "jjmVillageSnapshots": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.role === 'admin'"
+    }
+  }
+}

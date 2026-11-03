@@ -1,0 +1,71 @@
+{
+  "SENSOR_DATA": {
+    "Heartbeat": 0,
+    "UptimeSec": 0,
+    "Temperature": 25.0,
+    "TemperatureConnected": false,
+    "TemperatureStatus": "DISCONNECTED",
+    "TemperatureLastKnown": null,
+    "TDS": 0.0,
+    "TDSConnected": false,
+    "TDSStatus": "DISCONNECTED",
+    "TDSVoltage": 0.0,
+    "TDSRawADC": 0,
+    "TDSSpread": 0.0,
+    "TDSLastKnown": null,
+    "Turbidity": 0.0,
+    "TurbidityVoltage": 0.0,
+    "TurbidityNTU_Estimate": 0.0,
+    "TurbidityConnected": false,
+    "TurbidityStatus": "DISCONNECTED",
+    "TurbidityRawADC": 0,
+    "TurbiditySpread": 0.0,
+    "TurbidityLastKnown": null
+  },
+  "TEST_STATUS": {
+    "state": "IDLE",
+    "testId": null,
+    "mode": null,
+    "message": "Idle and ready",
+    "startMs": null,
+    "endMs": null
+  },
+  "TEST_COMMAND": null,
+  "TEST_RESULTS": {},
+  "CHLORINATION_STATUS": {
+    "state": "STANDBY",
+    "doseMl": null,
+    "testId": null,
+    "message": "Pump idle and ready",
+    "progress": 0
+  },
+  "CHLORINATION_COMMAND": null,
+  "DEVICE_COMMAND": {},
+  "CONFIG": {
+    "tdsMax": 500.0,
+    "turbidityMax": 5.0,
+    "maxDoseMl": 50.0
+  },
+  "SCHEDULE": {
+    "enabled": false,
+    "time": "08:00"
+  },
+  "SCHEDULE_STATE": {
+    "lastRunDate": null,
+    "lastRunTime": null,
+    "lastRunKey": null,
+    "status": null
+  },
+  "userProfiles": {},
+  "villages": {},
+  "waterSources": {},
+  "iotNodes": {},
+  "patients": {},
+  "patientCases": {},
+  "caseIndexByVillage": {},
+  "clinicalNotes": {},
+  "fieldTasks": {},
+  "weatherReports": {},
+  "earlyRiskAssessments": {},
+  "jjmVillageSnapshots": {}
+}
