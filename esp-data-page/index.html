@@ -1776,7 +1776,7 @@
                                 <option value="compliant">Safe / Within Criteria</option>
                                 <option value="high-tds">High TDS (&gt; 500 ppm)</option>
                                 <option value="high-turb">High Turbidity (&gt; 5.0 V)</option>
-                                <option value="sensor-offline">Sensor Disconnected</option>
+                                <option value="sensor-offline">Data Not Found (Sensor Unavailable)</option>
                             </select>
                         </div>
 
@@ -3203,7 +3203,7 @@
 
             // Check if sensor disconnected
             if (temp !== null && temp <= -50) {
-                return { key: "sensor-offline", label: "Sensor Fault", badgeClass: "badge-offline", icon: "fa-triangle-exclamation", description: "Temp sensor disconnected (-127°C)" };
+                return { key: "sensor-offline", label: "Data Not Found", badgeClass: "badge-offline", icon: "fa-triangle-exclamation", description: "Sensor is not available" };
             }
             if (turb !== null && turb > (systemConfig.turbidityMax || 5.0)) {
                 return { key: "high-turb", label: "High Turbidity", badgeClass: "badge-disconnected", icon: "fa-droplet-slash", description: "Turbidity exceeds safety threshold" };
@@ -3412,7 +3412,7 @@
 
                 const tempNum = item.Temperature !== undefined && item.Temperature !== null ? Number(item.Temperature) : null;
                 const tempStr = tempNum !== null
-                    ? (tempNum <= -50 ? '<span style="color: var(--danger-red); font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> Fault</span>' : `${tempNum.toFixed(1)} °C`)
+                    ? (tempNum <= -50 ? '<span style="color: var(--danger-red); font-weight: 600; font-size: 12px;"><i class="fa-solid fa-triangle-exclamation"></i> Sensor is not available</span>' : `${tempNum.toFixed(1)} °C`)
                     : "--";
 
                 tr.innerHTML = `
@@ -3552,7 +3552,8 @@
                     ? r.TurbidityNTU_Estimate
                     : (r.Turbidity !== undefined ? Math.max(0, Math.round((4.2 - Number(r.Turbidity)) * 250)) : "");
 
-                csv += `${r.Timestamp},"${dt}","${dtInfo.date}","${dtInfo.time}",${r.TDS !== undefined ? r.TDS : ''},${r.Turbidity !== undefined ? r.Turbidity : ''},${ntu},${r.Temperature !== undefined ? r.Temperature : ''},"${quality.label}"\n`;
+                const tempVal = r.Temperature !== undefined && r.Temperature !== null ? (Number(r.Temperature) <= -50 ? "Sensor is not available" : Number(r.Temperature)) : "";
+                csv += `${r.Timestamp},"${dt}","${dtInfo.date}","${dtInfo.time}",${r.TDS !== undefined ? r.TDS : ''},${r.Turbidity !== undefined ? r.Turbidity : ''},${ntu},"${tempVal}","${quality.label}"\n`;
             });
 
             const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
@@ -3584,13 +3585,14 @@
                 const ntu = r.TurbidityNTU_Estimate !== undefined && r.TurbidityNTU_Estimate !== null
                     ? r.TurbidityNTU_Estimate
                     : (r.Turbidity !== undefined ? Math.max(0, Math.round((4.2 - Number(r.Turbidity)) * 250)) : "");
+                const tempVal = r.Temperature !== undefined && r.Temperature !== null ? (Number(r.Temperature) <= -50 ? "Sensor is not available" : Number(r.Temperature)) : "";
                 return {
                     "Date": dtInfo.date,
                     "Time": dtInfo.time,
                     "TDS (ppm)": r.TDS !== undefined ? Number(r.TDS) : "",
                     "Turbidity (V)": r.Turbidity !== undefined ? Number(r.Turbidity) : "",
                     "Est. Turbidity (NTU)": ntu !== "" ? Number(ntu) : "",
-                    "Temperature (°C)": r.Temperature !== undefined ? Number(r.Temperature) : "",
+                    "Temperature (°C)": tempVal,
                     "Quality Status": quality.label
                 };
             });
