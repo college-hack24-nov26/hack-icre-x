@@ -997,9 +997,11 @@
                   <p id="wForecastConditionText" class="text-sm font-semibold text-slate-300 mt-1">--</p>
                   <!-- Multi-Model Live Status: shows model agreement & individual readings -->
                   <div id="wMultiModelPanel" class="mt-2 flex flex-wrap gap-1.5 items-center">
+                    <span id="wModelGfsTemp" class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">NOAA GFS: --</span>
+                    <span id="wModelWttrTemp" class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">METAR Obs: --</span>
                     <span id="wModelOMTemp" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Open-Meteo: --</span>
                     <span id="wModelMetnoTemp" class="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">Met.no: --</span>
-                    <span id="wModelConfBadge" class="text-[10px] font-bold px-2 py-0.5 rounded bg-white/10 text-white border border-white/20">Single model</span>
+                    <span id="wModelConfBadge" class="text-[10px] font-bold px-2 py-0.5 rounded bg-white/10 text-white border border-white/20">Consensus</span>
                   </div>
                   <p class="text-[11px] text-slate-400 mt-1">Live village forecast • Multi-Model Consensus</p>
                 </div>
@@ -1358,19 +1360,19 @@
                     <strong id="wModelGfsProb" class="font-mono text-xs font-bold text-sky-700">--%</strong>
                   </div>
                 </div>
-                <!-- IMD District Nowcast (when available) -->
+                <!-- NOAA GFS (US National Oceanic and Atmospheric Administration) -->
                 <div class="p-3 rounded-lg bg-white border border-slate-200 space-y-1 shadow-2xs">
                   <div class="flex items-center justify-between">
-                    <span class="font-black text-slate-800 text-[11px]">🇮🇳 IMD Nowcast</span>
-                    <span class="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">District</span>
+                    <span class="font-black text-slate-800 text-[11px]">🇺🇸 NOAA GFS</span>
+                    <span class="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Operational</span>
                   </div>
                   <div class="flex items-baseline justify-between mt-1">
-                    <span class="text-[10px] text-slate-500">Rain (24h):</span>
-                    <strong id="wModelIconRain" class="font-mono text-xs font-bold text-slate-800">-- mm</strong>
+                    <span class="text-[10px] text-slate-500">Model Temp:</span>
+                    <strong id="wModelGfsTempCard" class="font-mono text-xs font-bold text-slate-800">--°C</strong>
                   </div>
                   <div class="flex items-baseline justify-between">
-                    <span class="text-[10px] text-slate-500">Max Prob:</span>
-                    <strong id="wModelIconProb" class="font-mono text-xs font-bold text-amber-700">--%</strong>
+                    <span class="text-[10px] text-slate-500">Rain (24h):</span>
+                    <strong id="wModelGfsRainCard" class="font-mono text-xs font-bold text-amber-700">-- mm</strong>
                   </div>
                 </div>
                 <!-- Consensus -->
@@ -3358,6 +3360,13 @@
             if (rEl) rEl.textContent = metnoModel.rain24h;
             if (pEl) pEl.textContent = metnoModel.prob;
           }
+          const gfsModel = mmComp.models?.find(m => m.id === 'noaa_gfs');
+          if (gfsModel) {
+            const tEl = document.getElementById('wModelGfsTempCard');
+            const rEl = document.getElementById('wModelGfsRainCard');
+            if (tEl) tEl.textContent = `${gfsModel.temp}°C`;
+            if (rEl) rEl.textContent = gfsModel.rain24h;
+          }
 
           const consRainEl = document.getElementById('wModelConsensusRain');
           const consProbEl = document.getElementById('wModelConsensusProb');
@@ -3528,9 +3537,38 @@
 
         // === Multi-Model Live Status: show individual model temperatures ===
         const mmComp2 = vf.multiModelComparison || forecast.rainPrediction?.multiModelComparison;
+        const gfsTempEl = document.getElementById('wModelGfsTemp');
+        const wttrTempEl = document.getElementById('wModelWttrTemp');
         const omTempEl = document.getElementById('wModelOMTemp');
         const metnoTempEl = document.getElementById('wModelMetnoTemp');
         const confBadgeEl = document.getElementById('wModelConfBadge');
+
+        if (gfsTempEl) {
+          const gfsM = mmComp2?.models?.find(m => m.id === 'noaa_gfs');
+          if (gfsM && gfsM.temp) {
+            gfsTempEl.textContent = `NOAA GFS: ${gfsM.temp}°C`;
+            gfsTempEl.classList.remove('hidden');
+          } else if (vf.current?.gfsTemp) {
+            gfsTempEl.textContent = `NOAA GFS: ${vf.current.gfsTemp}`;
+            gfsTempEl.classList.remove('hidden');
+          } else {
+            gfsTempEl.classList.add('hidden');
+          }
+        }
+
+        if (wttrTempEl) {
+          const wttrM = mmComp2?.models?.find(m => m.id === 'wttr_metar');
+          if (wttrM && wttrM.temp) {
+            wttrTempEl.textContent = `METAR Obs: ${wttrM.temp}°C`;
+            wttrTempEl.classList.remove('hidden');
+          } else if (vf.current?.wttrTemp) {
+            wttrTempEl.textContent = `METAR Obs: ${vf.current.wttrTemp}`;
+            wttrTempEl.classList.remove('hidden');
+          } else {
+            wttrTempEl.classList.add('hidden');
+          }
+        }
+
         if (omTempEl) {
           const omM = mmComp2?.models?.find(m => m.id === 'open_meteo');
           omTempEl.textContent = omM ? `Open-Meteo: ${omM.temp}°C` : `Open-Meteo: ${vf.current?.openMeteoTemp || '--'}`;
@@ -3545,7 +3583,7 @@
           }
         }
         if (confBadgeEl) {
-          const conf = mmComp2?.confidenceLevel || forecast.rainPrediction?.confidenceLevel || 'Single model';
+          const conf = mmComp2?.confidenceLevel || forecast.rainPrediction?.confidenceLevel || 'Consensus';
           confBadgeEl.textContent = `✓ ${conf}`;
           // Green if high confidence (2+ models), amber if single
           if (conf.startsWith('High')) {
