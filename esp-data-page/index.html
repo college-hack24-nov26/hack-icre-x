@@ -1,0 +1,3620 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JalSanket - IoT Based Water Quality Monitoring System</title>
+    <link rel="icon" type="image/png" href="app-logo.png">
+    <link rel="apple-touch-icon" href="app-logo.png">
+
+    <!-- Google Fonts: Playfair Display (Logo & Headings), Plus Jakarta Sans (UI), JetBrains Mono (Data) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;0,900;1,600;1,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+    <!-- SheetJS (Excel Export) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <!-- Firebase SDK (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+    <style>
+        :root {
+            --font-heading: 'Playfair Display', Georgia, 'Times New Roman', serif;
+            --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+
+            --primary-blue: #004d73;
+            --primary-blue-dark: #003652;
+            --primary-blue-light: #006da3;
+            --accent-cyan: #00b4d8;
+            --bg-page: #f0f4f8;
+            --card-bg: #ffffff;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --text-light: #94a3b8;
+            --border-subtle: #e2e8f0;
+            --border-card: #e5eaf0;
+
+            --live-green: #10b981;
+            --live-green-bg: #ecfdf5;
+            --live-green-border: #a7f3d0;
+
+            --warn-amber: #f59e0b;
+            --warn-amber-bg: #fffbeb;
+            --warn-amber-border: #fde68a;
+
+            --danger-red: #ef4444;
+            --danger-red-bg: #fef2f2;
+            --danger-red-border: #fecaca;
+
+            --radius-xl: 18px;
+            --radius-lg: 14px;
+            --radius-md: 10px;
+            --shadow-card: 0 4px 20px -2px rgba(0, 50, 80, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+            --shadow-hover: 0 10px 25px -4px rgba(0, 50, 80, 0.12), 0 4px 10px -2px rgba(0, 0, 0, 0.06);
+            --transition: all 0.25s ease-in-out;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--font-sans);
+        }
+
+        h1, h2, h3, h4, .brand-title, .section-header h2, .sensor-title {
+            font-family: var(--font-heading);
+            letter-spacing: -0.3px;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: linear-gradient(135deg, #06233d 0%, #0c3e66 50%, #0284c7 100%);
+            color: #ffffff;
+            padding: 22px 20px 26px 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(6, 35, 61, 0.25);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 15% 50%, rgba(0, 180, 216, 0.18) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .header-brand-wrap {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            position: relative;
+            z-index: 1;
+            text-align: left;
+        }
+
+        .header-app-logo {
+            height: 70px;
+            width: 70px;
+            object-fit: cover;
+            border-radius: 50%;
+            background: #ffffff;
+            padding: 2px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28), 0 0 0 3px rgba(255, 255, 255, 0.35);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            flex-shrink: 0;
+        }
+
+        .header-app-logo:hover {
+            transform: scale(1.08) rotate(4deg);
+        }
+
+        .header-title-box {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-h1-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .brand-title {
+            font-family: var(--font-heading);
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin: 0;
+            line-height: 1.1;
+            color: #ffffff;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+        }
+
+        .brand-version-badge {
+            background: rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .brand-subtitle {
+            font-size: 13.5px;
+            color: #d0e7f9;
+            font-weight: 500;
+            margin-top: 4px;
+            letter-spacing: 0.2px;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            margin: -14px auto 30px auto;
+            padding: 0 16px;
+            flex: 1;
+        }
+
+        /* Firmware Status Alert Banner */
+        .firmware-status-banner {
+            border-radius: var(--radius-md);
+            padding: 12px 18px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-card);
+        }
+
+        .firmware-status-banner.verified {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .firmware-status-banner.outdated {
+            background: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .firmware-status-banner code {
+            background: rgba(0, 0, 0, 0.08);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 6px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-card);
+            margin-bottom: 20px;
+            overflow-x: auto;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .tab-btn {
+            flex: 1;
+            min-width: 140px;
+            padding: 10px 16px;
+            border: none;
+            background: transparent;
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--text-muted);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .tab-btn.active {
+            background: var(--primary-blue);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 77, 115, 0.25);
+        }
+
+        .tab-btn:hover:not(.active) {
+            background: #e2e8f0;
+            color: var(--text-dark);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Card styles */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius-xl);
+            padding: 22px 24px;
+            border: 1px solid var(--border-card);
+            box-shadow: var(--shadow-card);
+            margin-bottom: 18px;
+            transition: var(--transition);
+        }
+
+        /* System Status Card */
+        .system-status-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            border-left: 5px solid var(--primary-blue);
+        }
+
+        .status-group {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .status-entry {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .status-entry strong {
+            font-weight: 800;
+        }
+
+        .status-entry strong.online {
+            color: var(--live-green);
+        }
+
+        .status-entry strong.offline {
+            color: var(--danger-red);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-dot.online {
+            background: var(--live-green);
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+        }
+
+        .status-dot.offline {
+            background: var(--danger-red);
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+        }
+
+        /* Sensor Hero Cards Grid */
+        .sensor-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 18px;
+            margin-bottom: 20px;
+        }
+
+        .sensor-card {
+            position: relative;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border-radius: var(--radius-xl);
+            border: 2px solid transparent;
+            transition: var(--transition);
+        }
+
+        .sensor-card.live-mode {
+            border-color: rgba(16, 185, 129, 0.35);
+            background: linear-gradient(180deg, #ffffff 0%, #fafffd 100%);
+        }
+
+        .sensor-card.disconnected-mode {
+            border-color: rgba(245, 158, 11, 0.45);
+            background: linear-gradient(180deg, #ffffff 0%, #fffdf5 100%);
+        }
+
+        .sensor-card.offline-mode {
+            border-color: rgba(239, 68, 68, 0.45);
+            background: linear-gradient(180deg, #ffffff 0%, #fffafa 100%);
+        }
+
+        .sensor-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .sensor-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .sensor-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pin-pill {
+            font-size: 11px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            background: #e2e8f0;
+            color: #475569;
+            padding: 2px 7px;
+            border-radius: 6px;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        /* Status Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        .badge-live {
+            background: var(--live-green-bg);
+            color: var(--live-green);
+            border: 1px solid var(--live-green-border);
+        }
+
+        .badge-disconnected {
+            background: var(--warn-amber-bg);
+            color: #b45309;
+            border: 1px solid var(--warn-amber-border);
+        }
+
+        .badge-offline {
+            background: var(--danger-red-bg);
+            color: #b91c1c;
+            border: 1px solid var(--danger-red-border);
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            display: inline-block;
+        }
+
+        .badge-live .pulse-dot {
+            animation: blinkLive 1.2s infinite ease-in-out;
+        }
+
+        @keyframes blinkLive {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.3;
+                transform: scale(1.3);
+            }
+        }
+
+        /* Sensor Values */
+        .sensor-value-box {
+            margin: 12px 0 16px 0;
+        }
+
+        .sensor-value {
+            font-size: 46px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: -1.5px;
+            line-height: 1.1;
+            color: var(--primary-blue);
+            transition: color 0.3s ease;
+        }
+
+        .sensor-card.disconnected-mode .sensor-value {
+            color: #b45309;
+        }
+
+        .sensor-card.offline-mode .sensor-value {
+            color: #991b1b;
+        }
+
+        .sensor-unit {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Sensor Diagnostic Banner */
+        .sensor-diagnostic-banner {
+            padding: 10px 14px;
+            border-radius: var(--radius-md);
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: auto;
+        }
+
+        .sensor-diagnostic-banner.live-msg {
+            background: var(--live-green-bg);
+            color: #065f46;
+            border: 1px solid var(--live-green-border);
+        }
+
+        .sensor-diagnostic-banner.disconnect-msg {
+            background: var(--warn-amber-bg);
+            color: #92400e;
+            border: 1px solid var(--warn-amber-border);
+        }
+
+        .sensor-diagnostic-banner.offline-msg {
+            background: var(--danger-red-bg);
+            color: #991b1b;
+            border: 1px solid var(--danger-red-border);
+        }
+
+        /* Controls Grid */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .controls-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .section-header h2 {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--primary-blue);
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px dashed #e2e8f0;
+            font-size: 13px;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .detail-value {
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-dark);
+        }
+
+        /* Progress Bar */
+        .test-progress-container {
+            margin: 16px 0;
+            background: #f8fafc;
+            padding: 14px;
+            border-radius: var(--radius-md);
+            border: 1px solid #e2e8f0;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .progress-bar-track {
+            width: 100%;
+            height: 10px;
+            background: #e2e8f0;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--live-green));
+            border-radius: 20px;
+            transition: width 0.3s ease;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .btn-primary {
+            background: var(--primary-blue);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 77, 115, 0.25);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-blue-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: var(--danger-red);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: var(--live-green);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+
+        .btn-outline {
+            background: #ffffff;
+            color: var(--primary-blue);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .btn-outline:hover:not(:disabled) {
+            background: #f1f5f9;
+            border-color: var(--primary-blue);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .form-input {
+            padding: 10px 14px;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            outline: none;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.15);
+        }
+
+        .motor-box {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 14px;
+            background: #f8fafc;
+            border-radius: var(--radius-md);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 16px;
+        }
+
+        .motor-icon-spin {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: var(--text-muted);
+            transition: var(--transition);
+        }
+
+        .motor-icon-spin.active {
+            background: #e0f2fe;
+            color: var(--accent-cyan);
+            box-shadow: 0 0 14px rgba(0, 180, 216, 0.4);
+            animation: spinPump 1s linear infinite;
+        }
+
+        @keyframes spinPump {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--live-green);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(20px);
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 320px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            margin-top: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: #f8fafc;
+            padding: 12px 14px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            border-bottom: 2px solid var(--border-subtle);
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border-subtle);
+            color: var(--text-dark);
+            white-space: nowrap;
+        }
+
+        tr:hover td {
+            background: #f8fafc;
+        }
+
+        #toastContainer {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 9999;
+        }
+
+        .toast {
+            background: #ffffff;
+            color: var(--text-dark);
+            padding: 12px 18px;
+            border-radius: var(--radius-md);
+            border-left: 4px solid var(--primary-blue);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            animation: slideIn 0.3s ease forwards;
+        }
+
+        .toast.success {
+            border-left-color: var(--live-green);
+        }
+
+        .toast.error {
+            border-left-color: var(--danger-red);
+        }
+
+        .toast.warning {
+            border-left-color: var(--warn-amber);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Telemetry Filter Card & Advanced Controls */
+        .telemetry-filter-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius-lg);
+            padding: 16px 18px;
+            margin-bottom: 18px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .filter-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .filter-presets-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .preset-pill {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: var(--text-dark);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .preset-pill:hover {
+            background: #e2e8f0;
+            border-color: #94a3b8;
+        }
+
+        .preset-pill.active {
+            background: var(--primary-blue);
+            color: #ffffff;
+            border-color: var(--primary-blue);
+            box-shadow: 0 2px 8px rgba(0, 77, 115, 0.25);
+        }
+
+        .filter-search-box {
+            position: relative;
+            min-width: 260px;
+            flex: 1;
+            max-width: 360px;
+        }
+
+        .filter-search-box .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+            font-size: 13px;
+            pointer-events: none;
+        }
+
+        .filter-search-box .search-input {
+            padding-left: 34px;
+            padding-right: 32px;
+            width: 100%;
+            font-size: 13px;
+            height: 38px;
+            border-radius: 20px;
+            background: #ffffff;
+        }
+
+        .filter-search-box .search-clear-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 12px;
+            padding: 4px;
+            display: none;
+        }
+
+        .filter-search-box .search-clear-btn:hover {
+            color: var(--danger-red);
+        }
+
+        .filter-controls-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding-top: 10px;
+            border-top: 1px dashed #e2e8f0;
+        }
+
+        .filter-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .filter-field label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .filter-date-input,
+        .filter-select {
+            height: 38px;
+            padding: 6px 12px;
+            font-size: 13px;
+            border-radius: var(--radius-md);
+            background: #ffffff;
+        }
+
+        .filter-actions-group {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+            align-self: flex-end;
+        }
+
+        .filter-btn-apply {
+            height: 38px;
+            padding: 0 16px;
+            font-size: 13px;
+        }
+
+        .filter-btn-reset {
+            height: 38px;
+            padding: 0 14px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .filter-summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 12px;
+            color: var(--text-muted);
+            padding-top: 8px;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .telemetry-badge-count {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .telemetry-badge-count strong {
+            color: var(--primary-blue);
+            font-weight: 700;
+        }
+
+        .telemetry-stream-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            color: var(--live-green);
+            font-size: 11.5px;
+        }
+
+        .live-indicator-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--live-green);
+            animation: blinkLive 1.2s infinite ease-in-out;
+        }
+
+        /* Pagination Controls */
+        .pagination-container {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .pagination-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .pagination-info {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .pagination-info strong {
+            color: var(--text-dark);
+            font-weight: 700;
+        }
+
+        .pagination-buttons {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .pagination-btn {
+            min-width: 34px;
+            height: 34px;
+            padding: 0 10px;
+            border: 1px solid var(--border-subtle);
+            background: #ffffff;
+            color: var(--text-dark);
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            transition: var(--transition);
+        }
+
+        .pagination-btn:hover:not(:disabled):not(.active) {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+            transform: translateY(-1px);
+        }
+
+        .pagination-btn.active {
+            background: var(--primary-blue);
+            color: #ffffff;
+            border-color: var(--primary-blue);
+            box-shadow: 0 2px 8px rgba(0, 77, 115, 0.28);
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: #f8fafc;
+        }
+
+        .pagination-ellipsis {
+            padding: 0 4px;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+
+        .empty-logs-state {
+            padding: 24px 16px;
+            text-align: center;
+        }
+
+        .empty-logs-state i {
+            opacity: 0.6;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: var(--text-muted);
+            background: #e2e8f0;
+            margin-top: auto;
+        }
+
+        .footer-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .footer-mini-logo {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #ffffff;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+        }
+
+        @media (max-width: 640px) {
+            .header-brand-wrap {
+                flex-direction: column;
+                text-align: center;
+                gap: 12px;
+            }
+
+            .brand-title {
+                font-size: 28px;
+            }
+
+            .header-app-logo {
+                height: 60px;
+                width: 60px;
+            }
+
+            .brand-h1-row {
+                justify-content: center;
+            }
+
+            .sensor-value {
+                font-size: 38px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .system-status-card {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .filter-search-box {
+                max-width: 100%;
+                min-width: 100%;
+            }
+
+            .filter-actions-group {
+                width: 100%;
+                margin-left: 0;
+            }
+
+            .filter-actions-group .btn {
+                flex: 1;
+            }
+
+            .pagination-wrapper {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="header-brand-wrap">
+            <img src="app-logo.png" alt="JalSanket Logo" class="header-app-logo">
+            <div class="header-title-box">
+                <div class="brand-h1-row">
+                    <h1 class="brand-title">JalSanket</h1>
+                    <span class="brand-version-badge"><i class="fa-solid fa-droplet"></i> IoT Water Station</span>
+                </div>
+                <p class="brand-subtitle">Smart Water Quality Monitoring &amp; Precision Chlorination System</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- System Status Bar -->
+        <div class="card system-status-card">
+            <div class="status-group">
+                <div class="status-entry">
+                    <span class="status-dot offline" id="deviceDot"></span>
+                    <span>ESP32 Status: <strong id="deviceStatusText" class="offline">Offline</strong></span>
+                </div>
+                <div class="status-entry">
+                    <span class="status-dot offline" id="firebaseDot"></span>
+                    <span>Firebase: <strong id="firebaseStatusText">Checking...</strong></span>
+                </div>
+            </div>
+            <div class="status-entry" style="font-size: 13px;">
+                <i class="fa-regular fa-clock" style="color: var(--text-light);"></i>
+                <span>Last Telemetry: <strong id="lastHeartbeatText" style="color: var(--text-dark);">--</strong></span>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('tab-monitoring')">
+                <i class="fa-solid fa-gauge-high"></i> Live Monitoring
+            </button>
+            <button class="tab-btn" onclick="switchTab('tab-testing')">
+                <i class="fa-solid fa-vial-circle-check"></i> Water Testing
+            </button>
+            <button class="tab-btn" onclick="switchTab('tab-dosing')">
+                <i class="fa-solid fa-syringe"></i> Dosing & Pump
+            </button>
+            <button class="tab-btn" onclick="switchTab('tab-settings')">
+                <i class="fa-solid fa-sliders"></i> Thresholds & Schedule
+            </button>
+            <button class="tab-btn" onclick="switchTab('tab-history')">
+                <i class="fa-solid fa-clock-rotate-left"></i> History & Logs
+            </button>
+        </div>
+
+        <!-- TAB 1: LIVE SENSOR MONITORING -->
+        <div class="tab-content active" id="tab-monitoring">
+
+            <div class="sensor-cards-grid">
+
+                <!-- 1. WATER TEMPERATURE (PIN 4) -->
+                <div class="card sensor-card offline-mode" id="tempSensorCard">
+                    <div class="sensor-card-top">
+                        <div class="sensor-info">
+                            <span class="sensor-title">
+                                <i class="fa-solid fa-temperature-three-quarters" style="color: #ef4444;"></i> Water
+                                Temperature
+                            </span>
+                            <span class="pin-pill">PIN 4 &bull; DS18B20 OneWire</span>
+                        </div>
+                        <span class="badge badge-offline" id="tempBadge">
+                            <i class="fa-solid fa-power-off"></i> OFFLINE
+                        </span>
+                    </div>
+
+                    <div class="sensor-value-box">
+                        <div class="sensor-value" id="temperatureValue">--</div>
+                        <div class="sensor-unit">°C</div>
+                    </div>
+
+                    <div class="sensor-diagnostic-banner offline-msg" id="tempDiagnostic">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <span id="tempDiagnosticText">Waiting for ESP32 connection...</span>
+                    </div>
+                </div>
+
+                <!-- 2. TOTAL DISSOLVED SOLIDS (PIN 34) -->
+                <div class="card sensor-card offline-mode" id="tdsSensorCard">
+                    <div class="sensor-card-top">
+                        <div class="sensor-info">
+                            <span class="sensor-title">
+                                <i class="fa-solid fa-flask-vial" style="color: #00b4d8;"></i> Total Dissolved Solids
+                            </span>
+                            <span class="pin-pill">PIN 34 &bull; Analog ADC</span>
+                        </div>
+                        <span class="badge badge-offline" id="tdsBadge">
+                            <i class="fa-solid fa-power-off"></i> OFFLINE
+                        </span>
+                    </div>
+
+                    <div class="sensor-value-box">
+                        <div class="sensor-value" id="tdsValue">--</div>
+                        <div class="sensor-unit">ppm (estimated)</div>
+                    </div>
+
+                    <div class="sensor-diagnostic-banner offline-msg" id="tdsDiagnostic">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <span id="tdsDiagnosticText">Waiting for ESP32 connection...</span>
+                    </div>
+                </div>
+
+                <!-- 3. TURBIDITY SENSOR (PIN 35) -->
+                <div class="card sensor-card offline-mode" id="turbiditySensorCard">
+                    <div class="sensor-card-top">
+                        <div class="sensor-info">
+                            <span class="sensor-title">
+                                <i class="fa-solid fa-water" style="color: #10b981;"></i> Turbidity Sensor Voltage
+                            </span>
+                            <span class="pin-pill">PIN 35 &bull; Analog ADC</span>
+                        </div>
+                        <span class="badge badge-offline" id="turbidityBadge">
+                            <i class="fa-solid fa-power-off"></i> OFFLINE
+                        </span>
+                    </div>
+
+                    <div class="sensor-value-box">
+                        <div class="sensor-value" id="turbidityValue">--</div>
+                        <div class="sensor-unit">Volts (<span id="ntuValue">--</span> NTU approx)</div>
+                    </div>
+
+                    <div class="sensor-diagnostic-banner offline-msg" id="turbidityDiagnostic">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <span id="turbidityDiagnosticText">Waiting for ESP32 connection...</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Live Trend Chart -->
+            <div class="card">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-chart-line"></i> Live Sensor Telemetry Stream</h2>
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Auto-syncing from ESP32</span>
+                        <button type="button" class="btn btn-outline" style="padding: 4px 12px; font-size: 12px;" onclick="switchTab('tab-history'); setTimeout(() => { const el = document.getElementById('telemetryCard'); if(el) el.scrollIntoView({behavior: 'smooth'}); }, 100);">
+                            <i class="fa-solid fa-database"></i> View Telemetry Logs &rarr;
+                        </button>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="liveChart"></canvas>
+                </div>
+
+                <!-- Shortcut Banner to Detailed Telemetry Logs -->
+                <div style="margin-top: 14px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-radius: var(--radius-md); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fa-solid fa-circle-info" style="color: var(--primary-blue-light); font-size: 16px;"></i>
+                        <span style="font-size: 12.5px; color: var(--primary-blue-dark); font-weight: 600;">
+                            Continuous sensor telemetry streams live from ESP32. Access complete historical logs, date ranges, and multi-criteria filters in History &amp; Logs.
+                        </span>
+                    </div>
+                    <button type="button" class="btn btn-primary" style="padding: 6px 14px; font-size: 12px;" onclick="switchTab('tab-history'); setTimeout(() => { const el = document.getElementById('telemetryCard'); if(el) el.scrollIntoView({behavior: 'smooth'}); }, 100);">
+                        <i class="fa-solid fa-table-list"></i> Open Stream Logs
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- TAB 2: WATER TESTING CONTROLLER -->
+        <div class="tab-content" id="tab-testing">
+            <div class="card">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-vial-circle-check"></i> Water Quality Sampling Session</h2>
+                    <span class="badge badge-live" id="testStateBadge"
+                        style="background: #e2e8f0; color: #334155; border-color: #cbd5e1;">IDLE</span>
+                </div>
+
+                <div
+                    style="background: #f8fafc; border-radius: var(--radius-md); padding: 16px; border: 1px solid #e2e8f0;">
+                    <div class="detail-row">
+                        <span class="detail-label">Active Test ID:</span>
+                        <span class="detail-value" id="currentTestId">None</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Sampling Mode:</span>
+                        <span class="detail-value" id="currentTestMode">--</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Controller Status Message:</span>
+                        <span class="detail-value" id="testStatusMessage">Ready for command</span>
+                    </div>
+                </div>
+
+                <div class="test-progress-container">
+                    <div class="progress-header">
+                        <span id="testProgressLabel">60s Sampling Progress</span>
+                        <span id="testProgressPercent">0%</span>
+                    </div>
+                    <div class="progress-bar-track">
+                        <div class="progress-bar-fill" id="testProgressBarFill"></div>
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="btnStartTest" onclick="startWaterTest()">
+                        <i class="fa-solid fa-play"></i> Start 60s Water Test
+                    </button>
+                    <button class="btn btn-danger" id="btnStopTest" onclick="stopWaterTest()" disabled>
+                        <i class="fa-solid fa-stop"></i> Abort Test
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: CHLORINATION & DOSING PUMP -->
+        <div class="tab-content" id="tab-dosing">
+            <div class="card">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-syringe"></i> Chemical Dosing Pump Controller</h2>
+                    <span class="badge badge-live" id="chlorStateBadge"
+                        style="background: #e2e8f0; color: #334155; border-color: #cbd5e1;">STANDBY</span>
+                </div>
+
+                <div class="motor-box">
+                    <div class="motor-icon-spin" id="motorGraphic">
+                        <i class="fa-solid fa-fan"></i>
+                    </div>
+                    <div>
+                        <h4 id="motorTitle" style="font-size: 15px; font-weight: 700;">Dosing Motor (GPIO 25)</h4>
+                        <p id="motorDesc" style="font-size: 12px; color: var(--text-muted);">Motor is stationary.
+                            Standing by for coordinator dosing authorization.</p>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="doseTestId">Target Test ID</label>
+                        <input type="text" id="doseTestId" class="form-input" placeholder="e.g. T1700000000">
+                    </div>
+                    <div class="form-group">
+                        <label for="doseMlInput">Dosage Quantity (ml)</label>
+                        <input type="number" id="doseMlInput" class="form-input" min="1" step="0.5" value="10">
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-success" id="btnStartDose" onclick="startChlorination()">
+                        <i class="fa-solid fa-circle-check"></i> Authorize & Run Dosing
+                    </button>
+                    <button class="btn btn-danger" id="btnEmergencyStop" onclick="emergencyStopChlorination()">
+                        <i class="fa-solid fa-hand"></i> EMERGENCY STOP
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: THRESHOLDS & SCHEDULE -->
+        <div class="tab-content" id="tab-settings">
+            <div class="controls-grid">
+
+                <div class="card">
+                    <div class="section-header">
+                        <h2><i class="fa-solid fa-calendar-days"></i> Daily Auto-Testing Schedule</h2>
+                    </div>
+
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 14px; border: 1px solid #e2e8f0;">
+                        <span style="font-size: 13px; color: var(--text-muted);">
+                            <i class="fa-regular fa-clock" style="color: var(--primary-blue);"></i> Current Local Time:
+                            <strong id="scheduleCurrentClock"
+                                style="color: var(--text-dark); font-family: 'JetBrains Mono', monospace;">--:--:--</strong>
+                        </span>
+                        <span id="scheduleStatusPill" class="badge"
+                            style="background: #e2e8f0; color: #475569; font-size: 11px;">STANDBY</span>
+                    </div>
+
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <div>
+                            <h4 style="font-size: 14px; font-weight: 700;">Automated Daily Testing</h4>
+                            <p style="font-size: 12px; color: var(--text-muted);">Triggers automatic water sampling at
+                                set time</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="scheduleEnabledToggle" onchange="updateScheduleCountdown()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                                <label for="scheduleTimeInput">Scheduled Time (24h)</label>
+                                <span id="scheduleTimeHuman"
+                                    style="font-size: 12px; font-weight: 700; color: var(--primary-blue);">08:00
+                                    AM</span>
+                            </div>
+                            <input type="time" id="scheduleTimeInput" class="form-input" value="08:00"
+                                oninput="updateScheduleTimePreview()">
+                            <small id="scheduleAmPmTip"
+                                style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">24h
+                                format: 04:00 is 4:00 AM, 16:00 is 4:00 PM</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Last Execution</label>
+                            <input type="text" id="lastRunDateDisplay" class="form-input" value="Never" readonly
+                                style="background: #f1f5f9; font-family: 'JetBrains Mono', monospace; font-size: 12px;">
+                        </div>
+                    </div>
+
+                    <div id="scheduleNextCountdown"
+                        style="font-size: 12px; color: #0369a1; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 14px;">
+                        <i class="fa-solid fa-hourglass-half"></i> <span id="scheduleCountdownText">Calculating next
+                            trigger...</span>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-outline"
+                            style="flex: 1; min-width: 120px; font-size: 11px; padding: 6px 10px;"
+                            onclick="setScheduleOffset(2)">
+                            <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> Test in +2 Min
+                        </button>
+                        <button type="button" class="btn btn-outline"
+                            style="flex: 1; min-width: 120px; font-size: 11px; padding: 6px 10px;"
+                            onclick="setScheduleOffset(5)">
+                            <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> Test in +5 Min
+                        </button>
+                        <button type="button" class="btn btn-outline"
+                            style="flex: 1; min-width: 120px; font-size: 11px; padding: 6px 10px;"
+                            onclick="triggerScheduleNow()">
+                            <i class="fa-solid fa-play" style="color: #10b981;"></i> Run Test Now
+                        </button>
+                    </div>
+
+                    <button class="btn btn-primary" style="width: 100%;" onclick="saveScheduleSettings()">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Schedule Settings
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="section-header">
+                        <h2><i class="fa-solid fa-sliders"></i> Safety Threshold Limits</h2>
+                    </div>
+
+                    <div style="margin-bottom: 14px;">
+                        <label
+                            style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Quick
+                            Presets</label>
+                        <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 11px;"
+                                onclick="applyThresholdPreset('potable')">Strict Potable (300/1.0)</button>
+                            <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 11px;"
+                                onclick="applyThresholdPreset('who')">WHO Standard (500/5.0)</button>
+                            <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 11px;"
+                                onclick="applyThresholdPreset('relaxed')">Relaxed (800/8.0)</button>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="configTdsMax">Max Permissible TDS (ppm)</label>
+                            <input type="number" id="configTdsMax" class="form-input" value="500"
+                                oninput="updateThresholdCompliancePreview()">
+                            <small
+                                style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">Live:
+                                <strong id="threshLiveTds">--</strong> ppm &bull; <span
+                                    id="threshTdsStatus">Safe</span></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="configTurbidityMax">Max Permissible Turbidity (V)</label>
+                            <input type="number" id="configTurbidityMax" class="form-input" step="0.1" value="5.0"
+                                oninput="updateThresholdCompliancePreview()">
+                            <small
+                                style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">Live:
+                                <strong id="threshLiveTurb">--</strong> V &bull; <span
+                                    id="threshTurbStatus">Safe</span></small>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label for="configMaxDose">Max Allowed Chemical Dose (ml)</label>
+                        <input type="number" id="configMaxDose" class="form-input" value="50">
+                        <small
+                            style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">Safety
+                            cutoff to prevent chemical overdosing (max 50 ml recommended)</small>
+                    </div>
+
+                    <button class="btn btn-primary" style="width: 100%;" onclick="saveConfigThresholds()">
+                        <i class="fa-solid fa-shield-halved"></i> Save Safety Thresholds
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- TAB 5: TEST RECORDS LOG -->
+        <div class="tab-content" id="tab-history">
+            <div class="card">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-clipboard-list"></i> Completed Water Quality Test Records</h2>
+                    <button class="btn btn-outline" style="padding: 6px 14px; font-size: 12px;"
+                        onclick="exportResultsToCSV()">
+                        <i class="fa-solid fa-download"></i> Export CSV
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Test ID</th>
+                                <th>Timestamp</th>
+                                <th>Mode</th>
+                                <th>Avg TDS</th>
+                                <th>Avg Turbidity</th>
+                                <th>Avg Temp</th>
+                                <th>Water Status</th>
+                                <th>Chlorination Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="testResultsTableBody">
+                            <tr>
+                                <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 24px;">
+                                    Loading test records from Firebase...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Continuous Sensor Telemetry Stream Logs -->
+            <div class="card" id="telemetryCard" style="margin-top: 24px;">
+                <div class="section-header">
+                    <div>
+                        <h2><i class="fa-solid fa-database" style="color: var(--accent-cyan);"></i> Continuous Sensor Telemetry Stream Logs</h2>
+                        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">
+                            Real-time sensor logs from ESP32 &amp; Firebase RTDB with live filtering and pagination
+                        </span>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                        <button class="btn btn-outline"
+                            style="padding: 6px 14px; font-size: 12px; background: #ecfdf5; color: #059669; border-color: #a7f3d0;"
+                            onclick="exportTelemetryExcel()" title="Export current filtered records to Excel">
+                            <i class="fa-solid fa-file-excel"></i> Export Excel (.xlsx)
+                        </button>
+                        <button class="btn btn-outline" style="padding: 6px 14px; font-size: 12px;"
+                            onclick="exportTelemetryCSV()" title="Export current filtered records to CSV">
+                            <i class="fa-solid fa-file-csv"></i> Export CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Advanced Telemetry Filter Bar -->
+                <div class="telemetry-filter-card">
+                    <!-- Top Row: Quick Presets & Search Box -->
+                    <div class="filter-top-row">
+                        <div class="filter-presets-group">
+                            <span class="filter-group-label"><i class="fa-regular fa-calendar"></i> Quick Presets:</span>
+                            <div class="preset-buttons">
+                                <button type="button" class="preset-pill active" id="presetBtn_all" onclick="setTelemetryDatePreset('all')">All Records</button>
+                                <button type="button" class="preset-pill" id="presetBtn_today" onclick="setTelemetryDatePreset('today')">Today</button>
+                                <button type="button" class="preset-pill" id="presetBtn_yesterday" onclick="setTelemetryDatePreset('yesterday')">Yesterday</button>
+                                <button type="button" class="preset-pill" id="presetBtn_7days" onclick="setTelemetryDatePreset('7days')">Last 7 Days</button>
+                            </div>
+                        </div>
+
+                        <div class="filter-search-box">
+                            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                            <input type="text" id="telemetrySearchInput" class="form-input search-input" placeholder="Search by date, time, value, status..." oninput="handleTelemetrySearchInput(this.value)" autocomplete="off">
+                            <button type="button" id="telemetrySearchClearBtn" class="search-clear-btn" onclick="clearTelemetrySearch()" title="Clear Search">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Controls Row: Date Pickers, Status Filter, Sort Order, Page Size & Actions -->
+                    <div class="filter-controls-row">
+                        <div class="filter-field">
+                            <label for="telemetryFromDate">From Date:</label>
+                            <input type="date" id="telemetryFromDate" class="form-input filter-date-input" onchange="applyTelemetryFilters()">
+                        </div>
+
+                        <div class="filter-field">
+                            <label for="telemetryToDate">To Date:</label>
+                            <input type="date" id="telemetryToDate" class="form-input filter-date-input" onchange="applyTelemetryFilters()">
+                        </div>
+
+                        <div class="filter-field">
+                            <label for="telemetryStatusFilter">Quality Status:</label>
+                            <select id="telemetryStatusFilter" class="form-input filter-select" onchange="applyTelemetryFilters()">
+                                <option value="all">All Water Statuses</option>
+                                <option value="compliant">Safe / Within Criteria</option>
+                                <option value="high-tds">High TDS (&gt; 500 ppm)</option>
+                                <option value="high-turb">High Turbidity (&gt; 5.0 V)</option>
+                                <option value="sensor-offline">Sensor Disconnected</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-field">
+                            <label for="telemetrySortOrder">Sort Order:</label>
+                            <select id="telemetrySortOrder" class="form-input filter-select" onchange="applyTelemetryFilters()">
+                                <option value="desc" selected>Newest First &darr;</option>
+                                <option value="asc">Oldest First &uarr;</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-field">
+                            <label for="telemetryPageSize">Rows / Page:</label>
+                            <select id="telemetryPageSize" class="form-input filter-select" onchange="changeTelemetryPageSize(this.value)">
+                                <option value="10">10 per page</option>
+                                <option value="25" selected>25 per page</option>
+                                <option value="50">50 per page</option>
+                                <option value="100">100 per page</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-actions-group">
+                            <button type="button" class="btn btn-primary filter-btn-apply" onclick="filterTelemetryLogs()">
+                                <i class="fa-solid fa-filter"></i> Apply Filter
+                            </button>
+                            <button type="button" class="btn btn-outline filter-btn-reset" onclick="resetTelemetryFilters()" title="Reset all filters">
+                                <i class="fa-solid fa-rotate-left"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Summary & Live Connection Status -->
+                    <div class="filter-summary-row">
+                        <span id="telemetryCountBadge" class="telemetry-badge-count">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i> Loading telemetry records from Firebase...
+                        </span>
+                        <div class="telemetry-stream-status">
+                            <span class="live-indicator-dot"></span>
+                            <span>Live Stream Synced</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Continuous Telemetry Data Table -->
+                <div class="table-responsive" id="telemetryTableContainer">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 45px; text-align: center;">#</th>
+                                <th>Timestamp &amp; Local Time</th>
+                                <th>TDS (ppm)</th>
+                                <th>Turbidity (V &amp; NTU)</th>
+                                <th>Temperature (°C)</th>
+                                <th>Water Quality Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="telemetryTableBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 20px; color: var(--accent-cyan); margin-bottom: 8px;"></i><br>
+                                    Loading continuous telemetry records...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Advanced Pagination Controls -->
+                <div id="telemetryPagination" class="pagination-container"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Floating Toast Notifications -->
+    <div id="toastContainer"></div>
+
+    <footer>
+        <div class="footer-content">
+            <img src="app-logo.png" alt="JalSanket" class="footer-mini-logo">
+            <span><strong>JalSanket</strong> &bull; IoT Water Quality &amp; Precision Chlorination Control Station &bull; ESP32 &bull; Firebase RTDB</span>
+        </div>
+    </footer>
+
+    <!-- Application Script -->
+    <script>
+        // ==========================================
+        // 1. FIREBASE CONFIGURATION & INITIALIZATION
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyD6ODP5dOcHGKMtYn-OR7xTcJm-qitc228",
+            authDomain: "esp8266webapp-bd4f4.firebaseapp.com",
+            databaseURL: "https://esp8266webapp-bd4f4-default-rtdb.firebaseio.com",
+            projectId: "esp8266webapp-bd4f4",
+            storageBucket: "esp8266webapp-bd4f4.firebasestorage.app",
+            messagingSenderId: "494629844979",
+            appId: "1:494629844979:web:5ac14862c4982f4b978486",
+            measurementId: "G-XR7972DEXF"
+        };
+
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        if (firebase.auth) {
+            firebase.auth().signInAnonymously().catch(err => {
+                console.log("Auth notice:", err.message);
+            });
+        }
+
+        // ==========================================
+        // 2. PERSISTENCE & STATE MANAGEMENT
+        // ==========================================
+        const sensorState = {
+            temp: {
+                lastKnown: localStorage.getItem("jalsanket_last_temp") || "--",
+                lastTime: localStorage.getItem("jalsanket_last_temp_time") || null,
+                isLive: false
+            },
+            tds: {
+                lastKnown: localStorage.getItem("jalsanket_last_tds") || "--",
+                lastTime: localStorage.getItem("jalsanket_last_tds_time") || null,
+                isLive: false
+            },
+            turbidity: {
+                lastKnown: localStorage.getItem("jalsanket_last_turb") || "--",
+                lastNTU: localStorage.getItem("jalsanket_last_ntu") || "--",
+                lastTime: localStorage.getItem("jalsanket_last_turb_time") || null,
+                isLive: false
+            }
+        };
+
+        let lastHeartbeatValue = null;
+        let lastPayloadTimestamp = 0;
+        let lastHeartbeatMs = 0;      // epoch-ms from ESP32's Heartbeat field (real freshness)
+        let lastUptimeSec = -1;     // last seen UptimeSec; change confirms ESP32 is running
+        let isDeviceOnline = false;
+        let activeTestState = "IDLE";
+        let testProgressTimer = null;
+        let systemConfig = { tdsMax: 500, turbidityMax: 5.0, maxDoseMl: 50 };
+        let testRecordsList = [];
+
+        // Restore values from localStorage
+        if (sensorState.temp.lastKnown !== "--") document.getElementById("temperatureValue").textContent = sensorState.temp.lastKnown;
+        if (sensorState.tds.lastKnown !== "--") document.getElementById("tdsValue").textContent = sensorState.tds.lastKnown;
+        if (sensorState.turbidity.lastKnown !== "--") {
+            document.getElementById("turbidityValue").textContent = sensorState.turbidity.lastKnown;
+            if (sensorState.turbidity.lastNTU !== "--") document.getElementById("ntuValue").textContent = sensorState.turbidity.lastNTU;
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+
+            const targetBtn = Array.from(document.querySelectorAll(".tab-btn")).find(b => b.getAttribute("onclick") && b.getAttribute("onclick").includes(tabId));
+            if (targetBtn) targetBtn.classList.add("active");
+
+            const targetContent = document.getElementById(tabId);
+            if (targetContent) targetContent.classList.add("active");
+
+            try {
+                sessionStorage.setItem("jalsanket_active_tab", tabId);
+            } catch (e) { }
+        }
+
+        // Restore active tab or handle deep-links
+        window.addEventListener("DOMContentLoaded", () => {
+            const hash = window.location.hash;
+            if (hash === "#tab-history" || hash === "#telemetry-logs" || hash === "#logs") {
+                switchTab("tab-history");
+                setTimeout(() => {
+                    const el = document.getElementById("telemetryCard");
+                    if (el) el.scrollIntoView({ behavior: "smooth" });
+                }, 150);
+            } else {
+                try {
+                    const saved = sessionStorage.getItem("jalsanket_active_tab");
+                    if (saved && document.getElementById(saved)) switchTab(saved);
+                } catch (e) { }
+            }
+        });
+
+        function showToast(message, type = "info") {
+            const container = document.getElementById("toastContainer");
+            const toast = document.createElement("div");
+            toast.className = `toast ${type}`;
+            let icon = type === "success" ? "fa-circle-check" : (type === "error" ? "fa-triangle-exclamation" : "fa-circle-info");
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = "0";
+                toast.style.transform = "translateX(100%)";
+                toast.style.transition = "all 0.3s ease";
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // ==========================================
+        // 3. FIREBASE CONNECTIVITY LISTENER
+        // ==========================================
+        db.ref(".info/connected").on("value", snapshot => {
+            const connected = snapshot.val() === true;
+            const dot = document.getElementById("firebaseDot");
+            const text = document.getElementById("firebaseStatusText");
+
+            if (connected) {
+                dot.className = "status-dot online";
+                text.className = "online";
+                text.textContent = "Connected";
+            } else {
+                dot.className = "status-dot offline";
+                text.className = "offline";
+                text.textContent = "Disconnected";
+            }
+        });
+
+        // ==========================================
+        // 4. ESP32 WATCHDOG & OFFLINE CARD PROPAGATION
+        // ==========================================
+        function markCardsAsESP32Offline() {
+            isDeviceOnline = false;
+
+            const devDot = document.getElementById("deviceDot");
+            const devText = document.getElementById("deviceStatusText");
+            devDot.className = "status-dot offline";
+            devText.className = "offline";
+            devText.textContent = "Offline";
+
+            const offlineTime = sensorState.tds.lastTime || sensorState.turbidity.lastTime || sensorState.temp.lastTime || "earlier";
+
+            // Temperature
+            const tempCard = document.getElementById("tempSensorCard");
+            const tempBadge = document.getElementById("tempBadge");
+            const tempDiag = document.getElementById("tempDiagnostic");
+            const tempDiagText = document.getElementById("tempDiagnosticText");
+            tempCard.className = "card sensor-card offline-mode";
+            tempBadge.className = "badge badge-offline";
+            tempBadge.innerHTML = `<i class="fa-solid fa-power-off"></i> ESP32 OFFLINE`;
+            tempDiag.className = "sensor-diagnostic-banner offline-msg";
+            tempDiagText.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <strong>ESP32 Offline!</strong> Showing last recorded reading (${sensorState.temp.lastTime || offlineTime})`;
+
+            // TDS
+            const tdsCard = document.getElementById("tdsSensorCard");
+            const tdsBadge = document.getElementById("tdsBadge");
+            const tdsDiag = document.getElementById("tdsDiagnostic");
+            const tdsDiagText = document.getElementById("tdsDiagnosticText");
+            tdsCard.className = "card sensor-card offline-mode";
+            tdsBadge.className = "badge badge-offline";
+            tdsBadge.innerHTML = `<i class="fa-solid fa-power-off"></i> ESP32 OFFLINE`;
+            tdsDiag.className = "sensor-diagnostic-banner offline-msg";
+            tdsDiagText.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <strong>ESP32 Offline!</strong> Showing last recorded reading (${sensorState.tds.lastTime || offlineTime})`;
+
+            // Turbidity
+            const turbCard = document.getElementById("turbiditySensorCard");
+            const turbBadge = document.getElementById("turbidityBadge");
+            const turbDiag = document.getElementById("turbidityDiagnostic");
+            const turbDiagText = document.getElementById("turbidityDiagnosticText");
+            turbCard.className = "card sensor-card offline-mode";
+            turbBadge.className = "badge badge-offline";
+            turbBadge.innerHTML = `<i class="fa-solid fa-power-off"></i> ESP32 OFFLINE`;
+            turbDiag.className = "sensor-diagnostic-banner offline-msg";
+            turbDiagText.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <strong>ESP32 Offline!</strong> Showing last recorded reading (${sensorState.turbidity.lastTime || offlineTime})`;
+        }
+
+        // ── Offline watchdog ──────────────────────────────────────────────────
+        // Every 2 s we re-evaluate freshness using TWO independent signals:
+        //   1. lastPayloadTimestamp  – wall-clock time we last ran the listener
+        //   2. lastHeartbeatMs       – the epoch-ms value written by ESP32 itself
+        // Either signal being stale (> 10 s) triggers offline state.
+        // This correctly handles Firebase returning cached/stale data on reconnect.
+
+        setInterval(() => {
+            const now = Date.now();
+
+            // Signal 1: wall-clock since last Firebase listener fire
+            const listenerAge = lastPayloadTimestamp > 0 ? (now - lastPayloadTimestamp) : 999999;
+
+            // Signal 2: age of the Heartbeat field written by ESP32
+            // Only valid when Heartbeat is a real NTP epoch (> Jan 2023 in ms)
+            const isRealEpoch = lastHeartbeatMs > 1_700_000_000_000;
+            const heartbeatAge = isRealEpoch ? (now - lastHeartbeatMs) : 0;
+
+            // If EITHER signal is > 10 seconds, ESP32 is offline
+            if (listenerAge > 10000 || (isRealEpoch && heartbeatAge > 10000)) {
+                markCardsAsESP32Offline();
+            }
+        }, 2000);
+
+        // ==========================================
+        // 5. LIVE TELEMETRY LISTENER ("SENSOR_DATA")
+        // ==========================================
+        db.ref("SENSOR_DATA").on("value", snapshot => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            const nowTimeStr = new Date().toLocaleTimeString();
+            const nowMs = Date.now();
+
+            // ── Freshness gate ───────    ─────────────────────────────────────────
+            // Firebase may replay the last cached value even when ESP32 is offline.
+            // We use the Heartbeat field (epoch-ms written by ESP32 after NTP sync).
+            // If Heartbeat is a real epoch (> Jan 2023) and is older than 10 s → offline.
+            // If Heartbeat looks like device uptime (< 1 700 000 000 000) we skip the
+            // Heartbeat check and rely on the setInterval watchdog + listener wall-clock.
+            const hbMs = data.Heartbeat ? Number(data.Heartbeat) : 0;
+            const isRealEpoch = hbMs > 1_700_000_000_000; // true once NTP has synced
+            const hbAge = isRealEpoch ? (nowMs - hbMs) : 0;
+
+            if (isRealEpoch && hbAge > 10000) {
+                // Stale cached epoch-based payload – do NOT update online status
+                markCardsAsESP32Offline();
+                return;
+            }
+
+            // Fresh payload – update tracking variables
+            lastPayloadTimestamp = nowMs;   // wall-clock: always update when listener fires fresh
+            if (isRealEpoch) lastHeartbeatMs = hbMs;  // epoch: only update when NTP-synced
+            lastHeartbeatValue = hbMs;
+            if (data.UptimeSec !== undefined) lastUptimeSec = data.UptimeSec;
+            isDeviceOnline = true;
+
+            const devDot = document.getElementById("deviceDot");
+            const devText = document.getElementById("deviceStatusText");
+            devDot.className = "status-dot online";
+            devText.className = "online";
+            devText.textContent = "Online";
+            document.getElementById("lastHeartbeatText").textContent = nowTimeStr;
+
+            // -----------------------------------------------------------------
+            // A. WATER TEMPERATURE (PIN 4)
+            // -----------------------------------------------------------------
+            const tempCard = document.getElementById("tempSensorCard");
+            const tempBadge = document.getElementById("tempBadge");
+            const tempValElem = document.getElementById("temperatureValue");
+            const tempDiag = document.getElementById("tempDiagnostic");
+            const tempDiagText = document.getElementById("tempDiagnosticText");
+
+            const tempValue = Number(data.Temperature);
+            const tempIsValid =
+                data.Temperature !== undefined &&
+                data.Temperature !== null &&
+                data.Temperature !== "" &&
+                Number.isFinite(tempValue) &&
+                tempValue !== -127 &&
+                tempValue !== 85;
+
+            const tempIsLive = tempIsValid &&
+                data.TemperatureStatus !== "ERROR" &&
+                data.TemperatureConnected !== false;
+
+            if (tempIsLive) {
+                const liveTemp = tempValue.toFixed(2);
+
+                sensorState.temp.lastKnown = liveTemp;
+                sensorState.temp.lastTime = nowTimeStr;
+                sensorState.temp.isLive = true;
+
+                localStorage.setItem("jalsanket_last_temp", liveTemp);
+                localStorage.setItem("jalsanket_last_temp_time", nowTimeStr);
+
+                tempCard.className = "card sensor-card live-mode";
+                tempBadge.className = "badge badge-live";
+                tempBadge.innerHTML = `<span class="pulse-dot"></span> LIVE`;
+                tempValElem.textContent = liveTemp;
+                tempDiag.className = "sensor-diagnostic-banner live-msg";
+                tempDiagText.innerHTML =
+                    `<i class="fa-solid fa-circle-check"></i> Pin 4: DS18B20 temperature reading received`;
+            } else {
+                sensorState.temp.isLive = false;
+
+                const fallbackTemp =
+                    data.TemperatureLastKnown !== undefined &&
+                        data.TemperatureLastKnown !== null &&
+                        Number.isFinite(Number(data.TemperatureLastKnown))
+                        ? Number(data.TemperatureLastKnown).toFixed(2)
+                        : sensorState.temp.lastKnown;
+
+                tempCard.className = "card sensor-card disconnected-mode";
+                tempBadge.className = "badge badge-disconnected";
+                tempBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> LAST KNOWN`;
+                tempValElem.textContent = fallbackTemp !== "--" ? fallbackTemp : "--";
+                tempDiag.className = "sensor-diagnostic-banner disconnect-msg";
+                tempDiagText.innerHTML =
+                    `<i class="fa-solid fa-triangle-exclamation"></i> <strong>No valid temperature reading from Pin 4.</strong> Showing last known reading (${sensorState.temp.lastTime || "earlier"})`;
+            }
+
+            // -----------------------------------------------------------------
+            // B. TOTAL DISSOLVED SOLIDS (PIN 34)
+            // -----------------------------------------------------------------
+            const tdsCard = document.getElementById("tdsSensorCard");
+            const tdsBadge = document.getElementById("tdsBadge");
+            const tdsValElem = document.getElementById("tdsValue");
+            const tdsDiag = document.getElementById("tdsDiagnostic");
+            const tdsDiagText = document.getElementById("tdsDiagnosticText");
+
+            const isTdsExplicitlyConnected = data.TDSConnected !== undefined ? Boolean(data.TDSConnected) : null;
+            const isTdsStatusLive = data.TDSStatus === "LIVE";
+            // Fallback for older code: if raw ADC <= 25 or spread >= 65, disconnected
+            const rawAdcValid = data.TDSRawADC === undefined || data.TDSRawADC >= 35;
+            const spreadValid = data.TDSSpread === undefined || data.TDSSpread < 65;
+            const voltageValid = data.TDSVoltage === undefined || (data.TDSVoltage >= 0.040 && data.TDSVoltage <= 3.20);
+            const hasValidTdsNum = data.TDS !== null && !isNaN(data.TDS);
+
+            let tdsIsLive = false;
+            if (isTdsExplicitlyConnected !== null) {
+                tdsIsLive = isTdsExplicitlyConnected && hasValidTdsNum;
+            } else {
+                tdsIsLive = isTdsStatusLive || (hasValidTdsNum && rawAdcValid && spreadValid && voltageValid);
+            }
+
+            if (tdsIsLive) {
+                const liveTDS = Number(data.TDS).toFixed(2);
+                sensorState.tds.lastKnown = liveTDS;
+                sensorState.tds.lastTime = nowTimeStr;
+                sensorState.tds.isLive = true;
+                localStorage.setItem("jalsanket_last_tds", liveTDS);
+                localStorage.setItem("jalsanket_last_tds_time", nowTimeStr);
+
+                tdsCard.className = "card sensor-card live-mode";
+                tdsBadge.className = "badge badge-live";
+                tdsBadge.innerHTML = `<span class="pulse-dot"></span> LIVE`;
+                tdsValElem.textContent = liveTDS;
+                const voltStr = data.TDSVoltage !== undefined ? ` (${Number(data.TDSVoltage).toFixed(3)} V)` : "";
+                tdsDiag.className = "sensor-diagnostic-banner live-msg";
+                tdsDiagText.innerHTML = `<i class="fa-solid fa-circle-check"></i> Pin 34: Sensor connected${voltStr} &amp; streaming live`;
+            } else {
+                sensorState.tds.isLive = false;
+                const fallbackTDS = (data.TDSLastKnown !== undefined && data.TDSLastKnown !== null)
+                    ? Number(data.TDSLastKnown).toFixed(2)
+                    : sensorState.tds.lastKnown;
+
+                tdsCard.className = "card sensor-card disconnected-mode";
+                tdsBadge.className = "badge badge-disconnected";
+                tdsBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> LAST KNOWN`;
+                tdsValElem.textContent = fallbackTDS !== "--" ? fallbackTDS : "--";
+                const voltStr = data.TDSVoltage !== undefined ? ` (Voltage: ${Number(data.TDSVoltage).toFixed(3)} V)` : "";
+                tdsDiag.className = "sensor-diagnostic-banner disconnect-msg";
+                tdsDiagText.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <strong>Sensor Disconnected on Pin 34!</strong>${voltStr} Showing last known value`;
+            }
+
+            // -----------------------------------------------------------------
+            // C. TURBIDITY SENSOR (PIN 35)
+            // -----------------------------------------------------------------
+            const turbCard = document.getElementById("turbiditySensorCard");
+            const turbBadge = document.getElementById("turbidityBadge");
+            const turbValElem = document.getElementById("turbidityValue");
+            const ntuElem = document.getElementById("ntuValue");
+            const turbDiag = document.getElementById("turbidityDiagnostic");
+            const turbDiagText = document.getElementById("turbidityDiagnosticText");
+
+            const turbVoltage = data.TurbidityVoltage !== undefined ? Number(data.TurbidityVoltage) : (data.Turbidity !== undefined ? Number(data.Turbidity) : null);
+            const isTurbExplicitlyConnected = data.TurbidityConnected !== undefined ? Boolean(data.TurbidityConnected) : null;
+            const isTurbStatusLive = data.TurbidityStatus === "LIVE";
+            // Fallback for older code: Live turbidity is between 0.22V and 3.20V, ADC >= 150
+            const turbSpreadValid = data.TurbiditySpread === undefined || data.TurbiditySpread < 65;
+            const turbAdcValid = data.TurbidityRawADC === undefined || data.TurbidityRawADC >= 150;
+            const isVoltInLiveRange = turbVoltage !== null && turbVoltage >= 0.220 && turbVoltage <= 3.200;
+
+            let turbIsLive = false;
+            if (isTurbExplicitlyConnected !== null) {
+                turbIsLive = isTurbExplicitlyConnected;
+            } else {
+                turbIsLive = isTurbStatusLive || (isVoltInLiveRange && turbSpreadValid && turbAdcValid);
+            }
+
+            if (turbIsLive && turbVoltage !== null) {
+                const liveVoltage = turbVoltage.toFixed(3);
+                sensorState.turbidity.lastKnown = liveVoltage;
+                sensorState.turbidity.lastTime = nowTimeStr;
+                sensorState.turbidity.isLive = true;
+                localStorage.setItem("jalsanket_last_turb", liveVoltage);
+                localStorage.setItem("jalsanket_last_turb_time", nowTimeStr);
+
+                if (data.TurbidityNTU_Estimate !== undefined) {
+                    sensorState.turbidity.lastNTU = Number(data.TurbidityNTU_Estimate).toFixed(1);
+                    localStorage.setItem("jalsanket_last_ntu", sensorState.turbidity.lastNTU);
+                    ntuElem.textContent = sensorState.turbidity.lastNTU;
+                }
+
+                turbCard.className = "card sensor-card live-mode";
+                turbBadge.className = "badge badge-live";
+                turbBadge.innerHTML = `<span class="pulse-dot"></span> LIVE`;
+                turbValElem.textContent = liveVoltage;
+                turbDiag.className = "sensor-diagnostic-banner live-msg";
+                turbDiagText.innerHTML = `<i class="fa-solid fa-circle-check"></i> Pin 35: Voltage ${liveVoltage} V &bull; Sensor connected &amp; streaming live`;
+            } else {
+                sensorState.turbidity.isLive = false;
+                const fallbackTurb = (data.TurbidityLastKnown !== undefined && data.TurbidityLastKnown !== null)
+                    ? Number(data.TurbidityLastKnown).toFixed(3)
+                    : sensorState.turbidity.lastKnown;
+
+                turbCard.className = "card sensor-card disconnected-mode";
+                turbBadge.className = "badge badge-disconnected";
+                turbBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> LAST KNOWN`;
+                turbValElem.textContent = fallbackTurb !== "--" ? fallbackTurb : "--";
+                const vReported = turbVoltage !== null ? turbVoltage.toFixed(3) : "--";
+                turbDiag.className = "sensor-diagnostic-banner disconnect-msg";
+                turbDiagText.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <strong>Sensor Disconnected on Pin 35!</strong> (Voltage: ${vReported} V) Showing last known value`;
+            }
+        });
+
+        // ==========================================
+        // 6. WATER TESTING COMMANDS ("TEST_STATUS")
+        // ==========================================
+        db.ref("TEST_STATUS").on("value", snapshot => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            activeTestState = data.state || "IDLE";
+            activeTestId = data.testId || null;
+
+            document.getElementById("currentTestId").textContent = data.testId || "None";
+            document.getElementById("currentTestMode").textContent = data.mode || "None";
+            document.getElementById("testStatusMessage").textContent = data.message || "Idle";
+
+            const badge = document.getElementById("testStateBadge");
+            const btnStart = document.getElementById("btnStartTest");
+            const btnStop = document.getElementById("btnStopTest");
+
+            if (activeTestState === "RUNNING") {
+                badge.textContent = "RUNNING (SAMPLING)";
+                badge.style.background = "#fef3c7";
+                badge.style.color = "#b45309";
+                btnStart.disabled = true;
+                btnStop.disabled = false;
+                startSamplingProgressBar(data.startMs || Date.now(), data.testId);
+            } else if (activeTestState === "COMPLETED") {
+                badge.textContent = "COMPLETED";
+                badge.style.background = "#ecfdf5";
+                badge.style.color = "#059669";
+                btnStart.disabled = false;
+                btnStop.disabled = true;
+                stopSamplingProgressBar(100, "Sampling completed");
+            } else if (activeTestState === "STOPPED") {
+                badge.textContent = "STOPPED";
+                badge.style.background = "#fef2f2";
+                badge.style.color = "#dc2626";
+                btnStart.disabled = false;
+                btnStop.disabled = true;
+                stopSamplingProgressBar(0, "Sampling stopped");
+            } else {
+                badge.textContent = activeTestState;
+                badge.style.background = "#e2e8f0";
+                badge.style.color = "#334155";
+                btnStart.disabled = false;
+                btnStop.disabled = true;
+                stopSamplingProgressBar(0, "Idle");
+            }
+        });
+
+        let testSampleInterval = null;
+        let activeTestSamples = [];
+        let activeTestId = null;
+
+        function startSamplingProgressBar(startMs, currentTid) {
+            if (testProgressTimer) clearInterval(testProgressTimer);
+            const DURATION = 60000;
+
+            if (!testSampleInterval) {
+                testSampleInterval = setInterval(() => {
+                    const temp = parseFloat(document.getElementById("temperatureValue").textContent) || 25.0;
+                    const tds = parseFloat(document.getElementById("tdsValue").textContent) || 0.0;
+                    const turb = parseFloat(document.getElementById("turbidityValue").textContent) || 0.0;
+                    activeTestSamples.push({ temp, tds, turb });
+                }, 1000);
+            }
+
+            testProgressTimer = setInterval(() => {
+                const now = Date.now();
+                const elapsed = now - (startMs || now);
+                let pct = Math.min(100, Math.max(0, Math.round((elapsed / DURATION) * 100)));
+                let remSec = Math.max(0, Math.ceil((DURATION - elapsed) / 1000));
+
+                document.getElementById("testProgressBarFill").style.width = pct + "%";
+                document.getElementById("testProgressPercent").textContent = pct + "%";
+                document.getElementById("testProgressLabel").textContent = `60s Sampling active (${remSec}s remaining)`;
+
+                if (pct >= 100) {
+                    clearInterval(testProgressTimer);
+                    testProgressTimer = null;
+                    if (testSampleInterval) {
+                        clearInterval(testSampleInterval);
+                        testSampleInterval = null;
+                    }
+                    finalizeTestSession(currentTid || activeTestId, startMs);
+                }
+            }, 250);
+        }
+
+        function stopSamplingProgressBar(finalPct, label) {
+            if (testProgressTimer) {
+                clearInterval(testProgressTimer);
+                testProgressTimer = null;
+            }
+            if (testSampleInterval) {
+                clearInterval(testSampleInterval);
+                testSampleInterval = null;
+            }
+            document.getElementById("testProgressBarFill").style.width = finalPct + "%";
+            document.getElementById("testProgressPercent").textContent = finalPct + "%";
+            document.getElementById("testProgressLabel").textContent = label;
+        }
+
+        function startWaterTest() {
+            const now = Date.now();
+            const tid = "T" + Math.floor(now / 1000);
+            const cmdId = "TC_" + now + "_" + Math.floor(Math.random() * 1000);
+            activeTestSamples = [];
+            activeTestId = tid;
+
+            // 1. Immediately reflect RUNNING state on dashboard
+            document.getElementById("currentTestId").textContent = tid;
+            document.getElementById("currentTestMode").textContent = "Manual (60s)";
+            document.getElementById("testStatusMessage").textContent = "Water sampling session started...";
+            document.getElementById("btnStartTest").disabled = true;
+            document.getElementById("btnStopTest").disabled = false;
+
+            const badge = document.getElementById("testStateBadge");
+            badge.textContent = "RUNNING (SAMPLING)";
+            badge.style.background = "#fef3c7";
+            badge.style.color = "#b45309";
+
+            // 2. Start progress bar immediately
+            startSamplingProgressBar(now, tid);
+
+            // 3. Update TEST_STATUS on Firebase
+            db.ref("TEST_STATUS").set({
+                state: "RUNNING",
+                testId: tid,
+                mode: "Manual",
+                message: "Sampling started",
+                startMs: now
+            });
+
+            // 4. Dispatch TEST_COMMAND to ESP32
+            db.ref("TEST_COMMAND").set({
+                id: cmdId,
+                action: "START",
+                testId: tid,
+                ts: now
+            }).then(() => {
+                showToast(`Water test ${tid} started! Sampling for 60 seconds...`, "success");
+            }).catch(err => {
+                showToast("Command sent locally: " + err.message, "warning");
+            });
+
+            // 5. Compatibility command push
+            try {
+                db.ref("DEVICE_COMMAND").push({
+                    CommandId: cmdId,
+                    Command: "START_TESTING",
+                    Status: "PENDING",
+                    RequestedAt: now
+                });
+            } catch (e) { }
+        }
+
+        function stopWaterTest() {
+            const now = Date.now();
+            const cmdId = "TC_" + now + "_" + Math.floor(Math.random() * 1000);
+
+            stopSamplingProgressBar(0, "Sampling stopped by operator");
+
+            document.getElementById("btnStartTest").disabled = false;
+            document.getElementById("btnStopTest").disabled = true;
+            document.getElementById("testStatusMessage").textContent = "Test stopped by operator";
+
+            const badge = document.getElementById("testStateBadge");
+            badge.textContent = "STOPPED";
+            badge.style.background = "#fef2f2";
+            badge.style.color = "#dc2626";
+
+            // Update Firebase TEST_STATUS
+            db.ref("TEST_STATUS").update({
+                state: "STOPPED",
+                message: "Test stopped by operator",
+                endMs: now
+            });
+
+            // Send STOP command to ESP32
+            db.ref("TEST_COMMAND").set({
+                id: cmdId,
+                action: "STOP",
+                ts: now
+            }).then(() => {
+                showToast("Water test stopped by operator", "warning");
+            }).catch(err => {
+                showToast("Failed to stop test: " + err.message, "error");
+            });
+
+            try {
+                db.ref("DEVICE_COMMAND").push({
+                    CommandId: cmdId,
+                    Command: "STOP_TESTING",
+                    Status: "PENDING",
+                    RequestedAt: now
+                });
+            } catch (e) { }
+        }
+
+        function finalizeTestSession(tid, startMs) {
+            if (!tid) return;
+
+            db.ref("TEST_RESULTS/" + tid).once("value").then(snap => {
+                if (snap.exists()) {
+                    return;
+                }
+
+                let avgTemp = 25.0, avgTds = 0.0, avgTurb = 0.0;
+                if (activeTestSamples.length > 0) {
+                    let sTemp = 0, sTds = 0, sTurb = 0;
+                    activeTestSamples.forEach(s => {
+                        sTemp += s.temp;
+                        sTds += s.tds;
+                        sTurb += s.turb;
+                    });
+                    avgTemp = sTemp / activeTestSamples.length;
+                    avgTds = sTds / activeTestSamples.length;
+                    avgTurb = sTurb / activeTestSamples.length;
+                } else {
+                    avgTemp = parseFloat(document.getElementById("temperatureValue").textContent) || 25.0;
+                    avgTds = parseFloat(document.getElementById("tdsValue").textContent) || 0.0;
+                    avgTurb = parseFloat(document.getElementById("turbidityValue").textContent) || 0.0;
+                }
+
+                avgTemp = Math.round(avgTemp * 10) / 10;
+                avgTds = Math.round(avgTds * 10) / 10;
+                avgTurb = Math.round(avgTurb * 100) / 100;
+
+                const maxTDS = systemConfig.tdsMax || 500;
+                const maxTurb = systemConfig.turbidityMax || 5.0;
+                const required = (avgTds > maxTDS) || (avgTurb > maxTurb);
+                const waterStatus = required ? "Requires treatment" : "Within criteria";
+                const chlorineStatus = required ? "Awaiting Coordinator" : "Not Required";
+
+                const result = {
+                    testId: tid,
+                    startMs: startMs || (Date.now() - 60000),
+                    endMs: Date.now(),
+                    TDS: avgTds,
+                    Turbidity: avgTurb,
+                    Temperature: avgTemp,
+                    mode: "Manual",
+                    waterStatus: waterStatus,
+                    chlorinationRequired: required,
+                    chlorinationStatus: chlorineStatus
+                };
+
+                db.ref("TEST_RESULTS/" + tid).set(result);
+
+                db.ref("TEST_STATUS").set({
+                    state: "COMPLETED",
+                    testId: tid,
+                    mode: "Manual",
+                    message: "Test session complete. Result: " + waterStatus,
+                    startMs: startMs || (Date.now() - 60000),
+                    endMs: Date.now()
+                });
+
+                if (required) {
+                    const doseInput = document.getElementById("doseTestId");
+                    if (doseInput) doseInput.value = tid;
+                }
+
+                showToast(`Water test ${tid} complete: ${waterStatus}!`, required ? "warning" : "success");
+            });
+        }
+
+        // ==========================================
+        // 7. CHLORINATION & DOSING PUMP
+        // ==========================================
+        db.ref("CHLORINATION_STATUS").on("value", snapshot => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            const state = data.state || "STANDBY";
+            const badge = document.getElementById("chlorStateBadge");
+            const motorGraphic = document.getElementById("motorGraphic");
+            const motorTitle = document.getElementById("motorTitle");
+            const motorDesc = document.getElementById("motorDesc");
+
+            if (state === "SIMULATION_RUNNING") {
+                badge.textContent = "RUNNING";
+                badge.style.background = "#fef3c7";
+                badge.style.color = "#b45309";
+                motorGraphic.className = "motor-icon-spin active";
+                motorTitle.textContent = "Dosing Motor Running (GPIO 25 Active)";
+                motorDesc.textContent = `Dispensing ${data.doseMl || ""} ml chlorine for test ${data.testId || ""}...`;
+            } else if (state === "SIMULATION_COMPLETED") {
+                badge.textContent = "COMPLETED";
+                badge.style.background = "#ecfdf5";
+                badge.style.color = "#059669";
+                motorGraphic.className = "motor-icon-spin";
+                motorTitle.textContent = "Dosing Completed";
+                motorDesc.textContent = data.message || "Chemical dosing completed successfully.";
+            } else if (state === "ERROR") {
+                badge.textContent = "ERROR / REJECTED";
+                badge.style.background = "#fef2f2";
+                badge.style.color = "#dc2626";
+                motorGraphic.className = "motor-icon-spin";
+                motorTitle.textContent = "Dosing Rejected";
+                motorDesc.textContent = data.message || "Command failed verification.";
+            } else {
+                badge.textContent = state;
+                motorGraphic.className = "motor-icon-spin";
+                motorTitle.textContent = "Dosing Motor (GPIO 25)";
+                motorDesc.textContent = "Motor is stationary. Standing by for coordinator dosing authorization.";
+            }
+        });
+
+        function startChlorination() {
+            const testId = document.getElementById("doseTestId").value.trim();
+            const doseMl = parseFloat(document.getElementById("doseMlInput").value);
+
+            if (!testId) {
+                showToast("Please enter or select a valid Test ID", "error");
+                return;
+            }
+            if (isNaN(doseMl) || doseMl <= 0) {
+                showToast("Please enter a valid dosage (ml)", "error");
+                return;
+            }
+            if (doseMl > systemConfig.maxDoseMl) {
+                showToast(`Dosage exceeds max limit of ${systemConfig.maxDoseMl} ml!`, "error");
+                return;
+            }
+
+            const now = Date.now();
+            const cmdId = "CC_" + now + "_" + Math.floor(Math.random() * 1000);
+
+            db.ref("CHLORINATION_COMMAND").set({
+                id: cmdId,
+                action: "START",
+                testId: testId,
+                doseMl: doseMl,
+                ts: now
+            }).then(() => {
+                showToast(`Chlorination request dispatched (${doseMl} ml)`, "success");
+            }).catch(err => {
+                showToast("Failed to dispatch dosing command: " + err.message, "error");
+            });
+        }
+
+        function emergencyStopChlorination() {
+            const now = Date.now();
+            const cmdId = "CC_" + now + "_" + Math.floor(Math.random() * 1000);
+
+            db.ref("CHLORINATION_COMMAND").set({
+                id: cmdId,
+                action: "EMERGENCY_STOP",
+                ts: now
+            }).then(() => {
+                showToast("🚨 EMERGENCY STOP command executed!", "error");
+            }).catch(err => {
+                showToast("Failed to send emergency stop: " + err.message, "error");
+            });
+        }
+
+        // ==========================================
+        // 8. CONFIGURATION & SCHEDULE
+        // ==========================================
+        let lastScheduledTriggerKey = null;
+
+        db.ref("CONFIG").on("value", snapshot => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            if (data.tdsMax !== undefined) {
+                systemConfig.tdsMax = Number(data.tdsMax);
+                const elem = document.getElementById("configTdsMax");
+                if (elem) elem.value = systemConfig.tdsMax;
+            }
+            if (data.turbidityMax !== undefined) {
+                systemConfig.turbidityMax = Number(data.turbidityMax);
+                const elem = document.getElementById("configTurbidityMax");
+                if (elem) elem.value = systemConfig.turbidityMax;
+            }
+            if (data.maxDoseMl !== undefined) {
+                systemConfig.maxDoseMl = Number(data.maxDoseMl);
+                const elem = document.getElementById("configMaxDose");
+                if (elem) elem.value = systemConfig.maxDoseMl;
+            }
+            updateThresholdCompliancePreview();
+        });
+
+        function saveConfigThresholds() {
+            const tds = parseFloat(document.getElementById("configTdsMax").value);
+            const turb = parseFloat(document.getElementById("configTurbidityMax").value);
+            const dose = parseFloat(document.getElementById("configMaxDose").value);
+
+            if (isNaN(tds) || isNaN(turb) || isNaN(dose)) {
+                showToast("Please enter valid numerical thresholds", "error");
+                return;
+            }
+
+            db.ref("CONFIG").update({
+                tdsMax: tds,
+                turbidityMax: turb,
+                maxDoseMl: dose
+            }).then(() => {
+                systemConfig.tdsMax = tds;
+                systemConfig.turbidityMax = turb;
+                systemConfig.maxDoseMl = dose;
+                updateThresholdCompliancePreview();
+                showToast(`Thresholds saved: TDS ≤ ${tds} ppm, Turbidity ≤ ${turb} V, Max Dose ≤ ${dose} ml`, "success");
+            }).catch(err => {
+                showToast("Failed to save config: " + err.message, "error");
+            });
+        }
+
+        function applyThresholdPreset(preset) {
+            if (preset === 'potable') {
+                document.getElementById("configTdsMax").value = 300;
+                document.getElementById("configTurbidityMax").value = 1.0;
+                document.getElementById("configMaxDose").value = 25;
+            } else if (preset === 'who') {
+                document.getElementById("configTdsMax").value = 500;
+                document.getElementById("configTurbidityMax").value = 5.0;
+                document.getElementById("configMaxDose").value = 50;
+            } else if (preset === 'relaxed') {
+                document.getElementById("configTdsMax").value = 800;
+                document.getElementById("configTurbidityMax").value = 8.0;
+                document.getElementById("configMaxDose").value = 50;
+            }
+            saveConfigThresholds();
+        }
+
+        function updateThresholdCompliancePreview() {
+            const maxTds = parseFloat(document.getElementById("configTdsMax") ? document.getElementById("configTdsMax").value : systemConfig.tdsMax) || 500;
+            const maxTurb = parseFloat(document.getElementById("configTurbidityMax") ? document.getElementById("configTurbidityMax").value : systemConfig.turbidityMax) || 5.0;
+
+            const liveTdsElem = document.getElementById("threshLiveTds");
+            const liveTurbElem = document.getElementById("threshLiveTurb");
+            const tdsStatusElem = document.getElementById("threshTdsStatus");
+            const turbStatusElem = document.getElementById("threshTurbStatus");
+
+            const curTds = parseFloat(document.getElementById("tdsValue") ? document.getElementById("tdsValue").textContent : 0) || 0;
+            const curTurb = parseFloat(document.getElementById("turbidityValue") ? document.getElementById("turbidityValue").textContent : 0) || 0;
+
+            if (liveTdsElem) liveTdsElem.textContent = curTds.toFixed(1);
+            if (liveTurbElem) liveTurbElem.textContent = curTurb.toFixed(2);
+
+            if (tdsStatusElem) {
+                if (curTds > maxTds) {
+                    tdsStatusElem.innerHTML = `<span style="color: #dc2626; font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> EXCEEDS LIMIT (${curTds.toFixed(1)} > ${maxTds})</span>`;
+                } else {
+                    tdsStatusElem.innerHTML = `<span style="color: #059669; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> Safe (Within ≤ ${maxTds} ppm)</span>`;
+                }
+            }
+
+            if (turbStatusElem) {
+                if (curTurb > maxTurb) {
+                    turbStatusElem.innerHTML = `<span style="color: #dc2626; font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> EXCEEDS LIMIT (${curTurb.toFixed(2)} > ${maxTurb})</span>`;
+                } else {
+                    turbStatusElem.innerHTML = `<span style="color: #059669; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> Safe (Within ≤ ${maxTurb} V)</span>`;
+                }
+            }
+        }
+
+        db.ref("SCHEDULE").on("value", snapshot => {
+            const data = snapshot.val();
+            if (!data) return;
+            if (data.enabled !== undefined) {
+                const toggle = document.getElementById("scheduleEnabledToggle");
+                if (toggle) toggle.checked = Boolean(data.enabled);
+            }
+            if (data.time) {
+                const timeInput = document.getElementById("scheduleTimeInput");
+                if (timeInput) timeInput.value = data.time;
+            }
+            updateScheduleTimePreview();
+        });
+
+        db.ref("SCHEDULE_STATE").on("value", snapshot => {
+            const data = snapshot.val();
+            const disp = document.getElementById("lastRunDateDisplay");
+            if (!disp) return;
+            if (data) {
+                const dt = data.lastRunDate || "";
+                const tm = data.lastRunTime ? ` ${data.lastRunTime}` : "";
+                const st = data.status ? ` (${data.status})` : "";
+                disp.value = (dt || tm) ? `${dt}${tm}${st}` : "Never";
+            } else {
+                disp.value = "Never";
+            }
+        });
+
+        function saveScheduleSettings() {
+            const enabled = document.getElementById("scheduleEnabledToggle").checked;
+            const timeVal = document.getElementById("scheduleTimeInput").value;
+
+            if (!timeVal || timeVal.length < 5) {
+                showToast("Please select a valid scheduled time (HH:MM)", "error");
+                return;
+            }
+
+            db.ref("SCHEDULE").set({
+                enabled: enabled,
+                time: timeVal
+            }).then(() => {
+                updateScheduleTimePreview();
+                showToast(`Schedule saved: Daily test ${enabled ? 'ENABLED' : 'DISABLED'} at ${timeVal}`, "success");
+            }).catch(err => {
+                showToast("Failed to save schedule: " + err.message, "error");
+            });
+        }
+
+        function setScheduleOffset(minutes) {
+            const target = new Date(Date.now() + minutes * 60000);
+            const hh = String(target.getHours()).padStart(2, '0');
+            const mm = String(target.getMinutes()).padStart(2, '0');
+            const timeVal = `${hh}:${mm}`;
+
+            const timeInput = document.getElementById("scheduleTimeInput");
+            const toggle = document.getElementById("scheduleEnabledToggle");
+            if (timeInput) timeInput.value = timeVal;
+            if (toggle) toggle.checked = true;
+
+            updateScheduleTimePreview();
+            saveScheduleSettings();
+            showToast(`Quick Test Schedule set for ${hh}:${mm} (+${minutes} minutes)`, "success");
+        }
+
+        function triggerScheduleNow() {
+            startWaterTest();
+            showToast("Scheduled test triggered immediately!", "info");
+        }
+
+        function updateScheduleTimePreview() {
+            const timeInput = document.getElementById("scheduleTimeInput");
+            if (!timeInput) return;
+            const timeVal = timeInput.value;
+            if (!timeVal || timeVal.length < 5) return;
+
+            const [hStr, mStr] = timeVal.split(":");
+            let h = parseInt(hStr, 10);
+            const m = mStr;
+            const ampm = h >= 12 ? "PM" : "AM";
+            const h12 = h % 12 === 0 ? 12 : h % 12;
+            const humanStr = `${h12}:${m} ${ampm}`;
+
+            const humanElem = document.getElementById("scheduleTimeHuman");
+            if (humanElem) humanElem.textContent = humanStr;
+
+            const tipElem = document.getElementById("scheduleAmPmTip");
+            if (tipElem) {
+                const nowHour = new Date().getHours();
+                if (h < 12 && nowHour >= 12) {
+                    const pmHour = h + 12;
+                    tipElem.innerHTML = `<span style="color: #b45309; font-weight: 600;"><i class="fa-solid fa-circle-info"></i> ${humanStr} is early morning. For afternoon, choose ${String(pmHour).padStart(2, '0')}:${m}.</span>`;
+                } else {
+                    tipElem.textContent = `24h format: 04:00 is 4:00 AM, 16:00 is 4:00 PM`;
+                }
+            }
+
+            updateScheduleCountdown();
+        }
+
+        function updateScheduleCountdown() {
+            const toggle = document.getElementById("scheduleEnabledToggle");
+            const pill = document.getElementById("scheduleStatusPill");
+            const countBox = document.getElementById("scheduleNextCountdown");
+            const countText = document.getElementById("scheduleCountdownText");
+            if (!countText) return;
+
+            const enabled = toggle ? toggle.checked : false;
+
+            if (!enabled) {
+                if (pill) {
+                    pill.textContent = "DISABLED";
+                    pill.style.background = "#f1f5f9";
+                    pill.style.color = "#64748b";
+                }
+                if (countBox) countBox.style.background = "#f8fafc";
+                countText.innerHTML = `<i class="fa-solid fa-power-off"></i> <strong>Schedule is OFF:</strong> Automated daily testing will not trigger until enabled.`;
+                return;
+            }
+
+            if (pill) {
+                pill.textContent = "ACTIVE";
+                pill.style.background = "#ecfdf5";
+                pill.style.color = "#059669";
+            }
+            if (countBox) countBox.style.background = "#f0f9ff";
+
+            const timeInput = document.getElementById("scheduleTimeInput");
+            if (!timeInput) return;
+            const timeVal = timeInput.value;
+            if (!timeVal) return;
+
+            const [sh, sm] = timeVal.split(":").map(Number);
+            const now = new Date();
+            const schedDate = new Date();
+            schedDate.setHours(sh, sm, 0, 0);
+
+            if (schedDate.getTime() <= now.getTime()) {
+                schedDate.setDate(schedDate.getDate() + 1);
+            }
+
+            const diffMs = schedDate.getTime() - now.getTime();
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            const diffSecs = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+            let timeUntil = "";
+            if (diffHours > 0) timeUntil += `${diffHours}h `;
+            timeUntil += `${diffMins}m ${diffSecs}s`;
+
+            const ampm = sh >= 12 ? "PM" : "AM";
+            const h12 = sh % 12 === 0 ? 12 : sh % 12;
+            const targetLabel = `${h12}:${String(sm).padStart(2, '0')} ${ampm}`;
+
+            countText.innerHTML = `<i class="fa-solid fa-clock"></i> Next test triggers at <strong>${targetLabel}</strong> (in <strong>${timeUntil}</strong>)`;
+        }
+
+        // Live Clock & Schedule Watcher loop (runs every second)
+        setInterval(() => {
+            const now = new Date();
+            const clockElem = document.getElementById("scheduleCurrentClock");
+            if (clockElem) {
+                clockElem.textContent = now.toLocaleTimeString("en-GB", { hour12: false });
+            }
+
+            updateScheduleCountdown();
+            updateThresholdCompliancePreview();
+
+            // Client-side automated schedule trigger check
+            const toggle = document.getElementById("scheduleEnabledToggle");
+            const timeInput = document.getElementById("scheduleTimeInput");
+            if (toggle && toggle.checked && timeInput && timeInput.value) {
+                const [sh, sm] = timeInput.value.split(":").map(Number);
+                if (now.getHours() === sh && now.getMinutes() === sm) {
+                    const todayStr = now.toISOString().slice(0, 10);
+                    const triggerKey = `${todayStr}_${timeInput.value}`;
+                    if (lastScheduledTriggerKey !== triggerKey && activeTestState !== "RUNNING") {
+                        lastScheduledTriggerKey = triggerKey;
+                        console.log("[Schedule Watcher] Triggering scheduled test for", triggerKey);
+                        startWaterTest();
+
+                        db.ref("SCHEDULE_STATE").set({
+                            lastRunDate: todayStr,
+                            lastRunTime: now.toTimeString().slice(0, 8),
+                            lastRunKey: triggerKey,
+                            status: "TRIGGERED_AUTOMATIC"
+                        });
+                        showToast(`Daily automated water test triggered for ${timeInput.value}!`, "info");
+                    }
+                }
+            }
+        }, 1000);
+
+        // ==========================================
+        // 9. TEST RESULTS HISTORY TABLE
+        // ==========================================
+        db.ref("TEST_RESULTS").on("value", snapshot => {
+            const data = snapshot.val();
+            const tbody = document.getElementById("testResultsTableBody");
+            tbody.innerHTML = "";
+            testRecordsList = [];
+
+            if (!data) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 24px;">No historical test records found.</td></tr>`;
+                return;
+            }
+
+            // Convert Unix timestamp (seconds or milliseconds) to readable date/time.
+            function formatDateTime(timestamp) {
+                if (timestamp === undefined || timestamp === null || timestamp === "") {
+                    return "--";
+                }
+
+                let ms = Number(timestamp);
+
+                if (!Number.isFinite(ms) || ms <= 0) {
+                    return "--";
+                }
+
+                // If timestamp is in seconds, convert it to milliseconds.
+                if (ms < 1e12) {
+                    ms *= 1000;
+                }
+
+                const date = new Date(ms);
+
+                if (Number.isNaN(date.getTime())) {
+                    return "--";
+                }
+
+                return date.toLocaleString("en-GB", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                    hour12: false
+                });
+            }
+
+            const items = Object.keys(data).map(k => data[k]);
+            items.sort((a, b) => (Number(b.startMs) || 0) - (Number(a.startMs) || 0));
+            testRecordsList = items;
+
+            items.forEach(record => {
+                const tr = document.createElement("tr");
+                const timeStr = formatDateTime(record.endMs || record.startMs);
+
+                const isWithin = record.waterStatus === "Within criteria";
+                const waterStatusBadge = isWithin
+                    ? `<span style="background: #ecfdf5; color: #059669; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">Within criteria</span>`
+                    : `<span style="background: #fef2f2; color: #dc2626; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">Requires treatment</span>`;
+
+                tr.innerHTML = `
+                <td style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--primary-blue);">${record.testId || "--"}</td>
+                <td style="font-size: 12px; color: var(--text-muted);">${timeStr}</td>
+                <td><span style="background: #f1f5f9; padding: 2px 7px; border-radius: 4px; font-weight: 600;">${record.mode || "Manual"}</span></td>
+                <td style="font-family: 'JetBrains Mono', monospace;">${record.TDS !== undefined ? Number(record.TDS).toFixed(1) : "--"} ppm</td>
+                <td style="font-family: 'JetBrains Mono', monospace;">${record.Turbidity !== undefined ? Number(record.Turbidity).toFixed(2) : "--"} V</td>
+                <td style="font-family: 'JetBrains Mono', monospace;">${record.Temperature !== undefined ? Number(record.Temperature).toFixed(1) : "--"} °C</td>
+                <td>${waterStatusBadge}</td>
+                <td style="font-weight: 600;">${record.chlorinationStatus || "--"}</td>
+                <td>${record.chlorinationRequired && record.chlorinationStatus !== "Dosing Completed"
+                        ? `<button class="btn btn-primary" style="padding: 4px 10px; font-size: 11px;" onclick="selectForDosing('${record.testId}')"><i class="fa-solid fa-syringe"></i> Dose Now</button>`
+                        : '<span style="color: var(--text-muted); font-size: 11px;">--</span>'}</td>
+            `;
+
+                tbody.appendChild(tr);
+            });
+        });
+
+        function exportResultsToCSV() {
+            if (!testRecordsList || testRecordsList.length === 0) {
+                showToast("No test records to export", "error");
+                return;
+            }
+
+            let csv = "Test ID,Date Time,Mode,Avg TDS (ppm),Avg Turbidity (V),Avg Temp (C),Water Status,Chlorination Required,Chlorination Status\n";
+
+            testRecordsList.forEach(r => {
+                const timestamp = r.endMs || r.startMs;
+                let dt = "";
+
+                if (timestamp !== undefined && timestamp !== null && timestamp !== "") {
+                    let ms = Number(timestamp);
+
+                    if (Number.isFinite(ms) && ms > 0) {
+                        if (ms < 1e12) ms *= 1000;
+
+                        const date = new Date(ms);
+                        if (!Number.isNaN(date.getTime())) {
+                            dt = date.toISOString();
+                        }
+                    }
+                }
+
+                csv += `"${r.testId || ''}","${dt}","${r.mode || ''}",${r.TDS !== undefined ? Number(r.TDS).toFixed(2) : ''},${r.Turbidity !== undefined ? Number(r.Turbidity).toFixed(2) : ''},${r.Temperature !== undefined ? Number(r.Temperature).toFixed(2) : ''},"${r.waterStatus || ''}",${r.chlorinationRequired ? "YES" : "NO"},"${r.chlorinationStatus || ''}"\n`;
+            });
+
+            const link = document.createElement("a");
+            link.href = encodeURI("data:text/csv;charset=utf-8," + csv);
+            link.download = `JalSanket_Water_Test_Records_${Date.now()}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            showToast("CSV export completed", "success");
+        }
+
+        // ==========================================
+        // 10. LIVE TELEMETRY CHART
+        // ==========================================
+        const ctx = document.getElementById("liveChart").getContext("2d");
+        const chartLabels = [];
+        const tdsSeries = [];
+        const turbSeries = [];
+        const tempSeries = [];
+
+        const telemetryChart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    {
+                        label: "TDS (ppm)",
+                        data: tdsSeries,
+                        borderColor: "#00b4d8",
+                        backgroundColor: "rgba(0, 180, 216, 0.08)",
+                        borderWidth: 2,
+                        tension: 0.35,
+                        yAxisID: "yTDS",
+                        pointRadius: 2
+                    },
+                    {
+                        label: "Turbidity (V)",
+                        data: turbSeries,
+                        borderColor: "#10b981",
+                        backgroundColor: "rgba(16, 185, 129, 0.08)",
+                        borderWidth: 2,
+                        tension: 0.35,
+                        yAxisID: "yTurb",
+                        pointRadius: 2
+                    },
+                    {
+                        label: "Temperature (°C)",
+                        data: tempSeries,
+                        borderColor: "#ef4444",
+                        backgroundColor: "rgba(239, 68, 68, 0.08)",
+                        borderWidth: 2,
+                        tension: 0.35,
+                        yAxisID: "yTemp",
+                        pointRadius: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: {
+                        grid: { color: "#f1f5f9" },
+                        ticks: { color: "#64748b", font: { size: 11 } }
+                    },
+                    yTDS: {
+                        type: 'linear',
+                        position: 'left',
+                        grid: { color: "#e2e8f0" },
+                        ticks: { color: "#00b4d8" },
+                        title: { display: true, text: 'TDS (ppm)', color: '#00b4d8' }
+                    },
+                    yTurb: {
+                        type: 'linear',
+                        position: 'right',
+                        grid: { drawOnChartArea: false },
+                        ticks: { color: "#10b981" },
+                        title: { display: true, text: 'Turbidity (V)', color: '#10b981' }
+                    },
+                    yTemp: {
+                        type: 'linear',
+                        display: false
+                    }
+                },
+                plugins: {
+                    legend: { labels: { color: "#1e293b", font: { weight: '600' } } }
+                }
+            }
+        });
+
+        db.ref("SENSOR_HISTORY").limitToLast(30).on("value", snapshot => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            chartLabels.length = 0;
+            tdsSeries.length = 0;
+            turbSeries.length = 0;
+            tempSeries.length = 0;
+
+            Object.keys(data).forEach(key => {
+                const item = data[key];
+                const timeLabel = item.Timestamp ? new Date(item.Timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "";
+                chartLabels.push(timeLabel);
+                tdsSeries.push(item.TDS !== undefined ? Number(item.TDS).toFixed(1) : null);
+                turbSeries.push(item.Turbidity !== undefined ? Number(item.Turbidity).toFixed(2) : null);
+                tempSeries.push(item.Temperature !== undefined ? Number(item.Temperature).toFixed(1) : null);
+            });
+
+            telemetryChart.update();
+        });
+
+
+        // ==========================================
+        // 11. CONTINUOUS TELEMETRY TABLE, FILTERS & PAGINATION
+        // ==========================================
+        let allTelemetryRecords = [];
+        let filteredTelemetryRecords = [];
+        let telemetryCurrentPage = 1;
+        let telemetryPageSize = 25;
+
+        const telemetryFilterState = {
+            fromDate: "",
+            toDate: "",
+            searchQuery: "",
+            status: "all",
+            sortOrder: "desc"
+        };
+
+        function normalizeTimestampMs(ts) {
+            if (ts === undefined || ts === null || ts === "") return 0;
+            let ms = Number(ts);
+            if (!Number.isFinite(ms) || ms <= 0) return 0;
+            if (ms < 1e12) ms *= 1000;
+            return ms;
+        }
+
+        function formatTelemetryDateTime(ts) {
+            const ms = normalizeTimestampMs(ts);
+            if (ms <= 0) return { full: "--", date: "--", time: "--", relative: "" };
+            const d = new Date(ms);
+            if (Number.isNaN(d.getTime())) return { full: "--", date: "--", time: "--", relative: "" };
+
+            const dateStr = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+            const timeStr = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+
+            const diffSec = Math.floor((Date.now() - ms) / 1000);
+            let relative = "";
+            if (diffSec < 60) relative = "Just now";
+            else if (diffSec < 3600) relative = `${Math.floor(diffSec / 60)}m ago`;
+            else if (diffSec < 86400) relative = `${Math.floor(diffSec / 3600)}h ago`;
+            else relative = `${Math.floor(diffSec / 86400)}d ago`;
+
+            return {
+                full: `${dateStr} ${timeStr}`,
+                date: dateStr,
+                time: timeStr,
+                relative: relative
+            };
+        }
+
+        function getTelemetryRecordQuality(item) {
+            const temp = item.Temperature !== undefined && item.Temperature !== null ? Number(item.Temperature) : null;
+            const tds = item.TDS !== undefined && item.TDS !== null ? Number(item.TDS) : null;
+            const turb = item.Turbidity !== undefined && item.Turbidity !== null ? Number(item.Turbidity) : null;
+
+            // Check if sensor disconnected
+            if (temp !== null && temp <= -50) {
+                return { key: "sensor-offline", label: "Sensor Fault", badgeClass: "badge-offline", icon: "fa-triangle-exclamation", description: "Temp sensor disconnected (-127°C)" };
+            }
+            if (turb !== null && turb > (systemConfig.turbidityMax || 5.0)) {
+                return { key: "high-turb", label: "High Turbidity", badgeClass: "badge-disconnected", icon: "fa-droplet-slash", description: "Turbidity exceeds safety threshold" };
+            }
+            if (tds !== null && tds > (systemConfig.tdsMax || 500)) {
+                return { key: "high-tds", label: "High TDS", badgeClass: "badge-disconnected", icon: "fa-flask", description: "TDS exceeds safety threshold" };
+            }
+            return { key: "compliant", label: "Safe / Compliant", badgeClass: "badge-live", icon: "fa-circle-check", description: "All water quality metrics normal" };
+        }
+
+        function handleTelemetrySearchInput(val) {
+            const clearBtn = document.getElementById("telemetrySearchClearBtn");
+            if (clearBtn) {
+                clearBtn.style.display = val && val.trim() ? "block" : "none";
+            }
+            applyTelemetryFilters();
+        }
+
+        function clearTelemetrySearch() {
+            const input = document.getElementById("telemetrySearchInput");
+            if (input) input.value = "";
+            const clearBtn = document.getElementById("telemetrySearchClearBtn");
+            if (clearBtn) clearBtn.style.display = "none";
+            applyTelemetryFilters();
+        }
+
+        function setTelemetryDatePreset(preset) {
+            const fromInput = document.getElementById("telemetryFromDate");
+            const toInput = document.getElementById("telemetryToDate");
+            if (!fromInput || !toInput) return;
+
+            const now = new Date();
+            const formatYMD = d => {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, "0");
+                const day = String(d.getDate()).padStart(2, "0");
+                return `${year}-${month}-${day}`;
+            };
+
+            document.querySelectorAll(".preset-pill").forEach(p => p.classList.remove("active"));
+            const activePresetBtn = document.getElementById(`presetBtn_${preset}`);
+            if (activePresetBtn) activePresetBtn.classList.add("active");
+
+            if (preset === "all") {
+                fromInput.value = "";
+                toInput.value = "";
+            } else if (preset === "today") {
+                const todayStr = formatYMD(now);
+                fromInput.value = todayStr;
+                toInput.value = todayStr;
+            } else if (preset === "yesterday") {
+                const yest = new Date(now);
+                yest.setDate(yest.getDate() - 1);
+                const yestStr = formatYMD(yest);
+                fromInput.value = yestStr;
+                toInput.value = yestStr;
+            } else if (preset === "7days") {
+                const past = new Date(now);
+                past.setDate(past.getDate() - 7);
+                fromInput.value = formatYMD(past);
+                toInput.value = formatYMD(now);
+            }
+
+            applyTelemetryFilters();
+        }
+
+        function resetTelemetryFilters() {
+            if (document.getElementById("telemetryFromDate")) document.getElementById("telemetryFromDate").value = "";
+            if (document.getElementById("telemetryToDate")) document.getElementById("telemetryToDate").value = "";
+            if (document.getElementById("telemetrySearchInput")) document.getElementById("telemetrySearchInput").value = "";
+            if (document.getElementById("telemetrySearchClearBtn")) document.getElementById("telemetrySearchClearBtn").style.display = "none";
+            if (document.getElementById("telemetryStatusFilter")) document.getElementById("telemetryStatusFilter").value = "all";
+            if (document.getElementById("telemetrySortOrder")) document.getElementById("telemetrySortOrder").value = "desc";
+
+            document.querySelectorAll(".preset-pill").forEach(p => p.classList.remove("active"));
+            const allBtn = document.getElementById("presetBtn_all");
+            if (allBtn) allBtn.classList.add("active");
+
+            applyTelemetryFilters();
+            showToast("Telemetry filters reset to default", "info");
+        }
+
+        function filterTelemetryLogs() {
+            applyTelemetryFilters();
+            showToast(`Filtered ${filteredTelemetryRecords.length} records`, "info");
+        }
+
+        function applyTelemetryFilters(keepPage = false) {
+            const fromVal = document.getElementById("telemetryFromDate") ? document.getElementById("telemetryFromDate").value : telemetryFilterState.fromDate;
+            const toVal = document.getElementById("telemetryToDate") ? document.getElementById("telemetryToDate").value : telemetryFilterState.toDate;
+            const searchVal = document.getElementById("telemetrySearchInput") ? document.getElementById("telemetrySearchInput").value.trim().toLowerCase() : telemetryFilterState.searchQuery.toLowerCase();
+            const statusVal = document.getElementById("telemetryStatusFilter") ? document.getElementById("telemetryStatusFilter").value : telemetryFilterState.status;
+            const sortVal = document.getElementById("telemetrySortOrder") ? document.getElementById("telemetrySortOrder").value : telemetryFilterState.sortOrder;
+
+            telemetryFilterState.fromDate = fromVal;
+            telemetryFilterState.toDate = toVal;
+            telemetryFilterState.searchQuery = searchVal;
+            telemetryFilterState.status = statusVal;
+            telemetryFilterState.sortOrder = sortVal;
+
+            let fromTs = 0;
+            let toTs = Infinity;
+
+            if (fromVal) {
+                const f = new Date(fromVal + "T00:00:00");
+                if (!isNaN(f.getTime())) fromTs = f.getTime();
+            }
+            if (toVal) {
+                const t = new Date(toVal + "T23:59:59.999");
+                if (!isNaN(t.getTime())) toTs = t.getTime();
+            }
+
+            filteredTelemetryRecords = allTelemetryRecords.filter(item => {
+                const ms = normalizeTimestampMs(item.Timestamp);
+                if (ms > 0) {
+                    if (ms < fromTs || ms > toTs) return false;
+                }
+
+                const quality = getTelemetryRecordQuality(item);
+
+                if (statusVal === "compliant" && quality.key !== "compliant") return false;
+                if (statusVal === "high-tds" && quality.key !== "high-tds") return false;
+                if (statusVal === "high-turb" && quality.key !== "high-turb") return false;
+                if (statusVal === "sensor-offline" && quality.key !== "sensor-offline") return false;
+
+                if (searchVal) {
+                    const dtInfo = formatTelemetryDateTime(item.Timestamp);
+                    const tdsStr = item.TDS !== undefined && item.TDS !== null ? String(item.TDS) : "";
+                    const turbStr = item.Turbidity !== undefined && item.Turbidity !== null ? String(item.Turbidity) : "";
+                    const tempStr = item.Temperature !== undefined && item.Temperature !== null ? String(item.Temperature) : "";
+                    const rowText = `${dtInfo.full} ${dtInfo.relative} ${tdsStr} ${turbStr} ${tempStr} ${quality.label}`.toLowerCase();
+                    if (!rowText.includes(searchVal)) return false;
+                }
+
+                return true;
+            });
+
+            filteredTelemetryRecords.sort((a, b) => {
+                const msA = normalizeTimestampMs(a.Timestamp);
+                const msB = normalizeTimestampMs(b.Timestamp);
+                return sortVal === "asc" ? (msA - msB) : (msB - msA);
+            });
+
+            if (!keepPage) {
+                telemetryCurrentPage = 1;
+            } else {
+                const maxPages = Math.ceil(filteredTelemetryRecords.length / telemetryPageSize) || 1;
+                if (telemetryCurrentPage > maxPages) telemetryCurrentPage = maxPages;
+            }
+
+            renderTelemetryTablePage();
+        }
+
+        function renderTelemetryTablePage() {
+            const tbody = document.getElementById("telemetryTableBody");
+            const badge = document.getElementById("telemetryCountBadge");
+            const paginationContainer = document.getElementById("telemetryPagination");
+            if (!tbody) return;
+
+            tbody.innerHTML = "";
+            const totalCount = filteredTelemetryRecords.length;
+            const totalRaw = allTelemetryRecords.length;
+
+            if (totalCount === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 36px 16px;">
+                            <div class="empty-logs-state">
+                                <i class="fa-solid fa-filter-circle-xmark" style="font-size: 32px; color: var(--text-light); margin-bottom: 10px;"></i>
+                                <h3 style="font-family: var(--font-heading); font-size: 16px; color: var(--text-dark); margin-bottom: 6px;">No telemetry records match your filters</h3>
+                                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Try adjusting your date range, status, or search query.</p>
+                                <button type="button" class="btn btn-outline" style="font-size: 12px; padding: 6px 14px;" onclick="resetTelemetryFilters()">
+                                    <i class="fa-solid fa-rotate-left"></i> Reset All Filters
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`;
+                if (badge) badge.innerHTML = `<span style="color: var(--text-muted);">0 records match criteria (${totalRaw} total records loaded)</span>`;
+                if (paginationContainer) paginationContainer.innerHTML = "";
+                return;
+            }
+
+            const totalPages = Math.ceil(totalCount / telemetryPageSize) || 1;
+            if (telemetryCurrentPage < 1) telemetryCurrentPage = 1;
+            if (telemetryCurrentPage > totalPages) telemetryCurrentPage = totalPages;
+
+            const startIndex = (telemetryCurrentPage - 1) * telemetryPageSize;
+            const endIndex = Math.min(startIndex + telemetryPageSize, totalCount);
+            const pageSlice = filteredTelemetryRecords.slice(startIndex, endIndex);
+
+            if (badge) {
+                badge.innerHTML = `Showing <strong>${startIndex + 1}</strong> &ndash; <strong>${endIndex}</strong> of <strong>${totalCount}</strong> records${totalCount !== totalRaw ? ` <span style="color: var(--primary-blue-light); font-weight: 500;">(filtered from ${totalRaw} total)</span>` : ""}`;
+            }
+
+            pageSlice.forEach((item, idx) => {
+                const tr = document.createElement("tr");
+                const rowNum = startIndex + idx + 1;
+                const dt = formatTelemetryDateTime(item.Timestamp);
+                const quality = getTelemetryRecordQuality(item);
+
+                const tdsVal = item.TDS !== undefined && item.TDS !== null ? Number(item.TDS).toFixed(1) : "--";
+                const turbVal = item.Turbidity !== undefined && item.Turbidity !== null ? Number(item.Turbidity).toFixed(2) : "--";
+                const ntuVal = item.TurbidityNTU_Estimate !== undefined && item.TurbidityNTU_Estimate !== null
+                    ? Number(item.TurbidityNTU_Estimate).toFixed(0)
+                    : (turbVal !== "--" ? Math.max(0, Math.round((4.2 - Number(turbVal)) * 250)) : "--");
+
+                const tempNum = item.Temperature !== undefined && item.Temperature !== null ? Number(item.Temperature) : null;
+                const tempStr = tempNum !== null
+                    ? (tempNum <= -50 ? '<span style="color: var(--danger-red); font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> Fault</span>' : `${tempNum.toFixed(1)} °C`)
+                    : "--";
+
+                tr.innerHTML = `
+                    <td style="font-family: var(--font-mono); font-size: 11.5px; color: var(--text-light); text-align: center; width: 45px;">${rowNum}</td>
+                    <td>
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-weight: 600; font-size: 13px; color: var(--text-dark);">${dt.date} &bull; <span style="font-family: var(--font-mono); font-size: 12px;">${dt.time}</span></span>
+                            ${dt.relative ? `<small style="font-size: 11px; color: var(--text-light);"><i class="fa-regular fa-clock"></i> ${dt.relative}</small>` : ""}
+                        </div>
+                    </td>
+                    <td>
+                        <span style="font-family: var(--font-mono); font-weight: 700; color: #0284c7; font-size: 13px;">${tdsVal}</span>
+                        <small style="font-size: 11px; color: var(--text-muted); margin-left: 2px;">ppm</small>
+                    </td>
+                    <td>
+                        <span style="font-family: var(--font-mono); font-weight: 700; color: #059669; font-size: 13px;">${turbVal} V</span>
+                        ${ntuVal !== "--" ? `<small class="pin-pill" style="margin-left: 6px; font-size: 10px; background: #e0f2fe; color: #0369a1;">~${ntuVal} NTU</small>` : ""}
+                    </td>
+                    <td>
+                        <span style="font-family: var(--font-mono); font-weight: 700; color: #ef4444; font-size: 13px;">${tempStr}</span>
+                    </td>
+                    <td>
+                        <span class="badge ${quality.badgeClass}" style="font-size: 11px; padding: 3px 9px;" title="${quality.description}">
+                            <i class="fa-solid ${quality.icon}"></i> ${quality.label}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            renderTelemetryPagination(totalPages);
+        }
+
+        function renderTelemetryPagination(totalPages) {
+            const container = document.getElementById("telemetryPagination");
+            if (!container) return;
+
+            if (totalPages <= 1) {
+                container.innerHTML = "";
+                return;
+            }
+
+            let html = `
+                <div class="pagination-wrapper">
+                    <div class="pagination-info">
+                        Page <strong>${telemetryCurrentPage}</strong> of <strong>${totalPages}</strong>
+                    </div>
+                    <div class="pagination-buttons">
+                        <button type="button" class="pagination-btn" onclick="goToTelemetryPage(1)" ${telemetryCurrentPage === 1 ? "disabled" : ""} title="First Page">
+                            <i class="fa-solid fa-angles-left"></i>
+                        </button>
+                        <button type="button" class="pagination-btn" onclick="goToTelemetryPage(${telemetryCurrentPage - 1})" ${telemetryCurrentPage === 1 ? "disabled" : ""} title="Previous Page">
+                            <i class="fa-solid fa-chevron-left"></i> Prev
+                        </button>
+            `;
+
+            const maxVisible = 5;
+            let startPage = Math.max(1, telemetryCurrentPage - 2);
+            let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+            if (endPage - startPage < maxVisible - 1) {
+                startPage = Math.max(1, endPage - maxVisible + 1);
+            }
+
+            if (startPage > 1) {
+                html += `<button type="button" class="pagination-btn" onclick="goToTelemetryPage(1)">1</button>`;
+                if (startPage > 2) html += `<span class="pagination-ellipsis">&hellip;</span>`;
+            }
+
+            for (let p = startPage; p <= endPage; p++) {
+                html += `<button type="button" class="pagination-btn ${p === telemetryCurrentPage ? "active" : ""}" onclick="goToTelemetryPage(${p})">${p}</button>`;
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) html += `<span class="pagination-ellipsis">&hellip;</span>`;
+                html += `<button type="button" class="pagination-btn" onclick="goToTelemetryPage(${totalPages})">${totalPages}</button>`;
+            }
+
+            html += `
+                        <button type="button" class="pagination-btn" onclick="goToTelemetryPage(${telemetryCurrentPage + 1})" ${telemetryCurrentPage === totalPages ? "disabled" : ""} title="Next Page">
+                            Next <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                        <button type="button" class="pagination-btn" onclick="goToTelemetryPage(${totalPages})" ${telemetryCurrentPage === totalPages ? "disabled" : ""} title="Last Page">
+                            <i class="fa-solid fa-angles-right"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function goToTelemetryPage(page) {
+            const totalPages = Math.ceil(filteredTelemetryRecords.length / telemetryPageSize) || 1;
+            if (page < 1) page = 1;
+            if (page > totalPages) page = totalPages;
+            telemetryCurrentPage = page;
+            renderTelemetryTablePage();
+
+            const tableCard = document.getElementById("telemetryCard");
+            if (tableCard) {
+                tableCard.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        }
+
+        function changeTelemetryPageSize(newSize) {
+            telemetryPageSize = parseInt(newSize, 10) || 25;
+            telemetryCurrentPage = 1;
+            renderTelemetryTablePage();
+        }
+
+        // ==========================================
+        // SENSOR_HISTORY FIREBASE LISTENER
+        // ==========================================
+        db.ref("SENSOR_HISTORY").limitToLast(500).on("value", snapshot => {
+            const data = snapshot.val();
+            if (!data) return;
+            allTelemetryRecords = Object.keys(data).map(k => data[k]).filter(x => x && x.Timestamp);
+            allTelemetryRecords.sort((a, b) => normalizeTimestampMs(a.Timestamp) - normalizeTimestampMs(b.Timestamp));
+            // Apply current filters preserving user's page
+            applyTelemetryFilters(true);
+        });
+
+        function exportTelemetryCSV() {
+            const records = filteredTelemetryRecords.length > 0 ? filteredTelemetryRecords : allTelemetryRecords;
+            if (!records || records.length === 0) {
+                showToast("No telemetry records available to export", "error");
+                return;
+            }
+
+            let csv = "Timestamp,ISO_DateTime,LocalDate,LocalTime,TDS (ppm),Turbidity (V),Turbidity (NTU),Temperature (C),Water_Status\n";
+            records.forEach(r => {
+                const ms = normalizeTimestampMs(r.Timestamp);
+                const dt = ms > 0 ? new Date(ms).toISOString() : "";
+                const dtInfo = formatTelemetryDateTime(r.Timestamp);
+                const quality = getTelemetryRecordQuality(r);
+                const ntu = r.TurbidityNTU_Estimate !== undefined && r.TurbidityNTU_Estimate !== null
+                    ? r.TurbidityNTU_Estimate
+                    : (r.Turbidity !== undefined ? Math.max(0, Math.round((4.2 - Number(r.Turbidity)) * 250)) : "");
+
+                csv += `${r.Timestamp},"${dt}","${dtInfo.date}","${dtInfo.time}",${r.TDS !== undefined ? r.TDS : ''},${r.Turbidity !== undefined ? r.Turbidity : ''},${ntu},${r.Temperature !== undefined ? r.Temperature : ''},"${quality.label}"\n`;
+            });
+
+            const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `JalSanket_Telemetry_History_${Date.now()}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            showToast(`CSV export complete (${records.length} records)`, "success");
+        }
+
+        function exportTelemetryExcel() {
+            const records = filteredTelemetryRecords.length > 0 ? filteredTelemetryRecords : allTelemetryRecords;
+            if (!records || records.length === 0) {
+                showToast("No telemetry records available to export", "error");
+                return;
+            }
+
+            if (typeof XLSX === "undefined") {
+                showToast("SheetJS library not ready, falling back to CSV", "info");
+                exportTelemetryCSV();
+                return;
+            }
+
+            const excelRows = records.map(r => {
+                const dtInfo = formatTelemetryDateTime(r.Timestamp);
+                const quality = getTelemetryRecordQuality(r);
+                const ntu = r.TurbidityNTU_Estimate !== undefined && r.TurbidityNTU_Estimate !== null
+                    ? r.TurbidityNTU_Estimate
+                    : (r.Turbidity !== undefined ? Math.max(0, Math.round((4.2 - Number(r.Turbidity)) * 250)) : "");
+                return {
+                    "Date": dtInfo.date,
+                    "Time": dtInfo.time,
+                    "TDS (ppm)": r.TDS !== undefined ? Number(r.TDS) : "",
+                    "Turbidity (V)": r.Turbidity !== undefined ? Number(r.Turbidity) : "",
+                    "Est. Turbidity (NTU)": ntu !== "" ? Number(ntu) : "",
+                    "Temperature (°C)": r.Temperature !== undefined ? Number(r.Temperature) : "",
+                    "Quality Status": quality.label
+                };
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(excelRows);
+            worksheet["!cols"] = [{ wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 20 }, { wch: 16 }, { wch: 20 }];
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Telemetry Stream");
+            XLSX.writeFile(workbook, `JalSanket_Telemetry_Data_${Date.now()}.xlsx`);
+            showToast(`Excel downloaded (${records.length} records)`, "success");
+        }
+
+        function selectForDosing(testId) {
+            switchTab("tab-dosing");
+            const input = document.getElementById("doseTestId");
+            if (input) {
+                input.value = testId;
+                input.focus();
+            }
+            showToast(`Target Test ${testId} selected for dosing`, "info");
+        }
+
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,4 @@
+# Root duplicate files (stored inside esp-data-page/)
+/app-logo.png
+/index.html
+.vscode/
