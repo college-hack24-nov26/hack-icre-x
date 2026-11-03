@@ -1809,7 +1809,7 @@
         if (!data.success) throw new Error(data.error);
 
         villagesList = Array.isArray(data.villages) ? data.villages : (data.villages && data.villages.villages ? data.villages.villages : []);
-        villageSelect.innerHTML = '<option value="">-- Choose Village --</option>';
+        villageSelect.innerHTML = `<option value="">-- Choose Village (${villagesList.length} available) --</option>`;
         villagesList.forEach(v => {
           const opt = document.createElement('option');
           opt.value = v.villageName;

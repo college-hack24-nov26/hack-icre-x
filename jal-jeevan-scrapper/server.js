@@ -56,6 +56,46 @@ app.get('/api/districts', async (req, res) => {
   }
 });
 
+const districtVillagesCache = {};
+
+async function fetchDistrictVillagesLive(stateName, districtName) {
+  const cacheKey = (stateName || '').toLowerCase() + '_' + (districtName || '').toLowerCase();
+  if (districtVillagesCache[cacheKey]) return districtVillagesCache[cacheKey];
+
+  const states = getWeatherStates();
+  const cleanState = (stateName || '').replace(/\(\d+\)/g, '').trim().toLowerCase();
+  const s = states.find(st => st.name.toLowerCase() === cleanState || cleanState.includes(st.name.toLowerCase()) || st.name.toLowerCase().includes(cleanState));
+  if (!s) return [];
+
+  const zillas = await getZillaPanchayats(s.code);
+  const cleanDist = (districtName || '').replace(/\(\d+\)/g, '').trim().toLowerCase();
+  const z = zillas.find(zd => zd.name.toLowerCase() === cleanDist || cleanDist.includes(zd.name.toLowerCase()) || zd.name.toLowerCase().includes(cleanDist));
+  if (!z) return [];
+
+  const blocks = await getBlockPanchayats(z.code);
+  const gpPromises = blocks.map(async b => {
+    try {
+      const gps = await getGramPanchayats(b.code, { blockName: b.name, districtName: z.name, stateName: s.name });
+      return gps.map(gp => ({
+        rawVal: `${b.name}/${gp.name}/${gp.name}`,
+        rawText: `${gp.name} (${gp.name}, ${b.name})`,
+        villageName: gp.name,
+        panchayatName: gp.name,
+        blockName: b.name,
+        villageId: gp.code || gp.localCode || '',
+        blockId: b.code || '',
+        panchayatId: gp.code || ''
+      }));
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const list = (await Promise.all(gpPromises)).flat();
+  districtVillagesCache[cacheKey] = list;
+  return list;
+}
+
 // 3. Search Villages (JJM)
 app.get('/api/villages', async (req, res) => {
   const { state, district, query } = req.query;
@@ -63,9 +103,37 @@ app.get('/api/villages', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Parameters "state" and "district" are required.' });
   }
   try {
-    const data = await getVillages(state, district, query || '');
-    const villages = Array.isArray(data) ? data : (data.villages || []);
-    res.json({ success: true, count: villages.length, villages, state: data.state || state, district: data.district || district });
+    let villages = [];
+    try {
+      const data = await getVillages(state, district, query || '');
+      villages = Array.isArray(data) ? data : (data.villages || []);
+    } catch (scrapeErr) {
+      console.warn('[JJM Village Scraper Notice]:', scrapeErr.message);
+    }
+
+    // If ejalshakti returned 0 villages or redirected to Login.aspx,
+    // seamlessly resolve the complete live village list from official eGramSwaraj LGD live hierarchy
+    if (!villages || villages.length === 0) {
+      console.log(`[Server] ejalshakti returned 0 villages for "${district}, ${state}". Querying live eGramSwaraj LGD hierarchy...`);
+      villages = await fetchDistrictVillagesLive(state, district);
+    }
+
+    if (query && query.trim()) {
+      const q = query.trim().toLowerCase();
+      villages = villages.filter(v => 
+        (v.villageName && v.villageName.toLowerCase().includes(q)) ||
+        (v.panchayatName && v.panchayatName.toLowerCase().includes(q)) ||
+        (v.blockName && v.blockName.toLowerCase().includes(q))
+      );
+    }
+
+    res.json({
+      success: true,
+      count: villages.length,
+      villages,
+      state,
+      district
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
