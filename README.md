@@ -117,7 +117,7 @@ jal-sanket/
 
 ---
 
-## 🎯 SDG Alignment
+## 🎯 SDG Alignment For Environmental Impact
 
 | SDG | Relevance |
 |-----|-----------|
