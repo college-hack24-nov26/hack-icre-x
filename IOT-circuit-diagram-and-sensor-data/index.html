@@ -92,37 +92,36 @@
             flex-direction: column;
         }
 
-        header {
-            padding: 24px 20px 14px 20px;
-            text-align: center;
+        /* Background Logo Watermark */
+        .bg-watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: min(600px, 80vw);
+            max-height: 80vh;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.22;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: transparent;
-            position: relative;
-            z-index: 10;
+            user-select: none;
         }
 
-        .header-app-logo {
-            height: 105px;
-            max-width: 90%;
+        .bg-watermark img {
+            width: 100%;
+            height: auto;
             object-fit: contain;
-            display: block;
-            margin: 0 auto;
-            filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.85))
-                    drop-shadow(0 0 32px rgba(0, 180, 216, 0.55))
-                    drop-shadow(0 4px 14px rgba(0, 0, 0, 0.75));
-            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        .header-app-logo:hover {
-            transform: scale(1.05);
+            filter: drop-shadow(0 0 24px rgba(255, 255, 255, 0.95)) drop-shadow(0 8px 30px rgba(0, 77, 115, 0.35));
         }
 
         .container {
+            position: relative;
+            z-index: 1;
             max-width: 1200px;
             width: 100%;
-            margin: 16px auto 30px auto;
+            margin: 28px auto 30px auto;
             padding: 0 16px;
             flex: 1;
         }
@@ -1167,16 +1166,13 @@
         }
 
         @media (max-width: 640px) {
-            header {
-                padding: 16px 12px 10px 12px;
-            }
-
-            .header-app-logo {
-                height: 80px;
+            .bg-watermark {
+                width: min(340px, 88vw);
+                opacity: 0.20;
             }
 
             .container {
-                margin: 12px auto 24px auto;
+                margin: 16px auto 24px auto;
                 padding: 0 12px;
             }
 
@@ -1221,9 +1217,10 @@
 
 <body>
 
-    <header>
-        <img src="app-logo.png" alt="JalSanket" class="header-app-logo">
-    </header>
+    <!-- Ambient Background Watermark -->
+    <div class="bg-watermark" aria-hidden="true">
+        <img src="app-logo.png" alt="JalSanket Watermark">
+    </div>
 
     <div class="container">
 
