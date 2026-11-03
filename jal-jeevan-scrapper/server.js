@@ -156,14 +156,14 @@ app.get('/api/weather/blocks', async (req, res) => {
   }
 });
 
-// 8. Get Gram Panchayats
+// 8. Get Gram Panchayats & Complete Village Registry
 app.get('/api/weather/gps', async (req, res) => {
-  const { blockCode } = req.query;
+  const { blockCode, blockName, districtName, stateName } = req.query;
   if (!blockCode) {
     return res.status(400).json({ success: false, error: 'Query parameter "blockCode" is required.' });
   }
   try {
-    const gps = await getGramPanchayats(blockCode);
+    const gps = await getGramPanchayats(blockCode, { blockName, districtName, stateName });
     res.json({ success: true, count: gps.length, gps });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

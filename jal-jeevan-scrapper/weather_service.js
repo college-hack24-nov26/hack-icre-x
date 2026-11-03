@@ -688,21 +688,92 @@ async function getBlockPanchayats(districtCode) {
   }
 }
 
-async function getGramPanchayats(blockCode) {
-  if (cache.gps[blockCode]) return cache.gps[blockCode];
+async function getGramPanchayats(blockCode, meta = {}) {
+  const { blockName = '', districtName = '', stateName = '' } = meta || {};
+  const cacheKey = `${blockCode}_${blockName}_${districtName}`;
+  if (cache.gps[cacheKey] && cache.gps[cacheKey].length > 0) return cache.gps[cacheKey];
+  if (cache.gps[blockCode] && cache.gps[blockCode].length > 0) return cache.gps[blockCode];
+
+  const listMap = new Map();
+
+  // 1. Fetch official Gram Panchayats from eGramSwaraj LGD hierarchy
   try {
     const raw = await callDwr('getParentwiseLbList', [blockCode]);
-    const list = raw.map((item) => ({
-      code: String(item.localBodyCode || item.id || item.code),
-      name: item.localBodyNameEnglish || item.name || item.text,
-      localName: item.localBodyNameLocal || '',
-    }));
-    cache.gps[blockCode] = list;
-    return list;
+    if (Array.isArray(raw)) {
+      raw.forEach((item) => {
+        const code = String(item.localBodyCode || item.id || item.code || '');
+        const name = (item.localBodyNameEnglish || item.name || item.text || '').trim();
+        const localName = (item.localBodyNameLocal || '').trim();
+        if (code && name) {
+          listMap.set(name.toLowerCase(), {
+            code,
+            name,
+            localName,
+            source: 'eGramSwaraj'
+          });
+        }
+      });
+    }
   } catch (e) {
-    console.warn('[getGramPanchayats error]', e.message);
-    return [];
+    console.warn('[getGramPanchayats eGramSwaraj error]', e.message);
   }
+
+  // 2. Augment with official Jal Jeevan Mission village registry for this block
+  if (districtName && stateName) {
+    try {
+      const { getVillages } = require('./village_scraper');
+      const jjmRes = await getVillages(stateName, districtName);
+      if (jjmRes && Array.isArray(jjmRes.villages)) {
+        const cleanBlock = (blockName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const filtered = jjmRes.villages.filter(v => {
+          if (!cleanBlock) return true;
+          const b = (v.blockName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          return b === cleanBlock || b.includes(cleanBlock) || cleanBlock.includes(b);
+        });
+
+        filtered.forEach(v => {
+          const vName = (v.villageName || '').trim();
+          if (vName && !listMap.has(vName.toLowerCase())) {
+            listMap.set(vName.toLowerCase(), {
+              code: v.villageId || `jjm_${vName.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+              name: vName,
+              localName: v.panchayatName ? `(GP: ${v.panchayatName})` : '',
+              source: 'JJM'
+            });
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('[getGramPanchayats JJM augmentation error]', err.message);
+    }
+  }
+
+  // 3. Always include the Block/Taluka Center itself (e.g. Palus, Phaltan, Satara)
+  if (blockName) {
+    const cleanBlockName = blockName.trim();
+    const lowB = cleanBlockName.toLowerCase();
+    if (!listMap.has(lowB)) {
+      listMap.set(lowB, {
+        code: `block_${blockCode}`,
+        name: `${cleanBlockName} (Taluka Center)`,
+        localName: '',
+        source: 'TalukaCenter'
+      });
+    }
+  }
+
+  // Sort list: Taluka Center first, then alphabetical
+  const result = Array.from(listMap.values()).sort((a, b) => {
+    if (a.source === 'TalukaCenter') return -1;
+    if (b.source === 'TalukaCenter') return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  if (result.length > 0) {
+    cache.gps[cacheKey] = result;
+    cache.gps[blockCode] = result;
+  }
+  return result;
 }
 
 // =========================================================================

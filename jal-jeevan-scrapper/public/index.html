@@ -845,15 +845,19 @@
               </select>
             </div>
 
-            <!-- Weather Gram Panchayat -->
+            <!-- Weather Gram Panchayat / Village -->
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
-                <span>Gram Panchayat *</span>
+                <span>Village / Gram Panchayat *</span>
                 <span id="wGpSpinner" class="hidden text-sky-600"><i class="fa-solid fa-circle-notch fa-spin text-[10px]"></i></span>
               </label>
-              <select id="wGpSelect" disabled class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none transition font-medium text-slate-400 cursor-not-allowed">
-                <option value="">-- First select block --</option>
-              </select>
+              <div class="space-y-1.5">
+                <input id="wGpSearchInput" type="text" placeholder="🔍 Search or filter villages..." disabled
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs focus:ring-2 focus:ring-sky-500 focus:bg-white focus:outline-none transition font-medium placeholder:text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed" />
+                <select id="wGpSelect" disabled class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none transition font-medium text-slate-400 cursor-not-allowed">
+                  <option value="">-- First select block --</option>
+                </select>
+              </div>
             </div>
 
             <!-- Button Get Data -->
@@ -2535,6 +2539,7 @@
     const wZillaSelect = document.getElementById('wZillaSelect');
     const wBlockSelect = document.getElementById('wBlockSelect');
     const wGpSelect = document.getElementById('wGpSelect');
+    const wGpSearchInput = document.getElementById('wGpSearchInput');
     const btnGetWeatherData = document.getElementById('btnGetWeatherData');
 
     const wZillaSpinner = document.getElementById('wZillaSpinner');
@@ -2707,35 +2712,87 @@
       }
     });
 
-    // 4. Weather Block Change -> Gram Panchayats
+    // Helper to render filtered GP / village options
+    function renderGpOptions(list, filter = '') {
+      wGpSelect.innerHTML = `<option value="">-- Choose Village (${list.length} available) --</option>`;
+      const cleanFilter = filter.toLowerCase().trim();
+      let matchedCount = 0;
+      list.forEach(g => {
+        const fullTxt = `${g.name} ${g.localName || ''}`.toLowerCase();
+        if (!cleanFilter || fullTxt.includes(cleanFilter)) {
+          const opt = document.createElement('option');
+          opt.value = g.code;
+          opt.textContent = g.localName ? `${g.name} ${g.localName}` : g.name;
+          wGpSelect.appendChild(opt);
+          matchedCount++;
+        }
+      });
+      if (matchedCount === 0 && cleanFilter) {
+        const customOpt = document.createElement('option');
+        customOpt.value = `custom_${cleanFilter}`;
+        customOpt.textContent = `📍 Use "${filter}" (Custom Village)`;
+        customOpt.selected = true;
+        wGpSelect.appendChild(customOpt);
+        btnGetWeatherData.disabled = false;
+      }
+    }
+
+    if (wGpSearchInput) {
+      wGpSearchInput.addEventListener('input', () => {
+        const query = wGpSearchInput.value;
+        renderGpOptions(weatherGpsList, query);
+        if (wGpSelect.options.length === 2) {
+          wGpSelect.selectedIndex = 1;
+          btnGetWeatherData.disabled = false;
+        } else if (wGpSelect.value) {
+          btnGetWeatherData.disabled = false;
+        } else {
+          btnGetWeatherData.disabled = true;
+        }
+      });
+    }
+
+    // 4. Weather Block Change -> Complete Village & Gram Panchayat Registry
     wBlockSelect.addEventListener('change', async () => {
       const blockCode = wBlockSelect.value;
-      wGpSelect.innerHTML = '<option value="">-- Loading Gram Panchayats... --</option>';
+      const blockName = wBlockSelect.options[wBlockSelect.selectedIndex]?.text || '';
+      const districtName = wZillaSelect.options[wZillaSelect.selectedIndex]?.text || '';
+      const stateName = wStateSelect.options[wStateSelect.selectedIndex]?.text || '';
+
+      wGpSelect.innerHTML = '<option value="">-- Loading complete village list... --</option>';
       wGpSelect.disabled = true;
       wGpSelect.className = wGpSelect.className.replace('bg-white', 'bg-slate-100').replace('cursor-pointer', 'cursor-not-allowed').replace('text-slate-800', 'text-slate-400');
+      if (wGpSearchInput) {
+        wGpSearchInput.value = '';
+        wGpSearchInput.disabled = true;
+      }
       btnGetWeatherData.disabled = true;
 
       if (!blockCode) return;
 
       wGpSpinner.classList.remove('hidden');
       try {
-        const res = await fetch(`/api/weather/gps?blockCode=${encodeURIComponent(blockCode)}`);
+        const params = new URLSearchParams({
+          blockCode,
+          blockName,
+          districtName,
+          stateName
+        });
+        const res = await fetch(`/api/weather/gps?${params.toString()}`);
         const data = await res.json();
         if (!data.success) throw new Error(data.error);
 
-        weatherGpsList = data.gps;
-        wGpSelect.innerHTML = '<option value="">-- Choose Gram Panchayat --</option>';
-        weatherGpsList.forEach(g => {
-          const opt = document.createElement('option');
-          opt.value = g.code;
-          opt.textContent = g.name;
-          wGpSelect.appendChild(opt);
-        });
+        weatherGpsList = data.gps || [];
+        renderGpOptions(weatherGpsList);
 
         wGpSelect.disabled = false;
         wGpSelect.className = wGpSelect.className.replace('bg-slate-100', 'bg-white').replace('cursor-not-allowed', 'cursor-pointer').replace('text-slate-400', 'text-slate-800');
+        if (wGpSearchInput) {
+          wGpSearchInput.disabled = false;
+          wGpSearchInput.placeholder = `🔍 Search from ${weatherGpsList.length} villages in ${blockName}...`;
+        }
       } catch (err) {
-        wGpSelect.innerHTML = '<option value="">-- Error loading GPs --</option>';
+        wGpSelect.innerHTML = '<option value="">-- Error loading villages --</option>';
       } finally {
         wGpSpinner.classList.add('hidden');
       }
@@ -2950,11 +3007,20 @@
       const blockOpt = wBlockSelect.options[wBlockSelect.selectedIndex];
       const zillaOpt = wZillaSelect.options[wZillaSelect.selectedIndex];
       const stateOpt = wStateSelect.options[wStateSelect.selectedIndex];
-      const villageName = opt ? opt.text : `GP ${gpCode}`;
+      const rawVillageText = opt ? opt.text : `GP ${gpCode}`;
       const blockName = blockOpt ? blockOpt.text : '';
       const districtName = zillaOpt ? zillaOpt.text : '';
       const stateName = stateOpt ? stateOpt.text : '';
-      const locName = opt ? `${opt.text} (${blockOpt ? blockOpt.text + ', ' : ''}${zillaOpt ? zillaOpt.text : ''})` : `GP: ${gpCode}`;
+
+      // Clean village name removing annotations like '(Taluka Center)', '(GP: ...)', '📍 Use "..."'
+      let villageName = rawVillageText
+        .replace(/\s*\([^)]*\)/g, '')
+        .replace(/^📍\s*Use\s*"/, '')
+        .replace(/"\s*\(Custom Village\)$/, '')
+        .trim();
+      if (!villageName) villageName = rawVillageText;
+
+      const locName = `${villageName} (${blockName ? blockName + ', ' : ''}${districtName ? districtName : ''})`;
 
       // === Persist last selection to localStorage ===
       const selection = {
@@ -2971,7 +3037,7 @@
       try { localStorage.setItem('jjm_last_location', JSON.stringify(selection)); } catch (_) {}
 
       fetchWeatherUnified({
-        gpCode,
+        gpCode: gpCode && !gpCode.startsWith('custom_') && !gpCode.startsWith('block_') && !gpCode.startsWith('jjm_') ? gpCode : null,
         locName,
         village: villageName,
         block: blockName,
@@ -3987,20 +4053,27 @@
 
       wGpSpinner.classList.remove('hidden');
       try {
-        const gRes = await fetch('/api/weather/gps?blockCode=' + encodeURIComponent(blockCode));
+        const blkName = wBlockSelect.options[wBlockSelect.selectedIndex]?.text || '';
+        const distName = wZillaSelect.options[wZillaSelect.selectedIndex]?.text || '';
+        const stName = wStateSelect.options[wStateSelect.selectedIndex]?.text || '';
+        const params = new URLSearchParams({
+          blockCode,
+          blockName: blkName,
+          districtName: distName,
+          stateName: stName
+        });
+        const gRes = await fetch(`/api/weather/gps?${params.toString()}`);
         const gData = await gRes.json();
         if (gData.success && gData.gps) {
           weatherGpsList = gData.gps;
-          wGpSelect.innerHTML = '<option value="">-- Choose Gram Panchayat --</option>';
-          weatherGpsList.forEach(g => {
-            const opt = document.createElement('option');
-            opt.value = g.code;
-            opt.textContent = g.name;
-            wGpSelect.appendChild(opt);
-          });
+          renderGpOptions(weatherGpsList);
           wGpSelect.disabled = false;
           wGpSelect.className = wGpSelect.className.replace('bg-slate-100', 'bg-white').replace('cursor-not-allowed', 'cursor-pointer').replace('text-slate-400', 'text-slate-800');
           wGpSelect.value = gpCode;
+          if (wGpSearchInput) {
+            wGpSearchInput.disabled = false;
+            wGpSearchInput.placeholder = `🔍 Search from ${weatherGpsList.length} villages in ${blkName}...`;
+          }
           btnGetWeatherData.disabled = false;
         }
       } catch (e) {
