@@ -2217,27 +2217,39 @@ async function getUnifiedImdWeather({ gpCode = null, stationId = null, locationM
     }
 
     // Consensus temperature:
-    // NOAA GFS (0.40) + Surface METAR (0.40) + Open-Meteo (0.10) + Met.no (0.10)
-    // Matches Google Weather / AccuWeather ground truth (25.5°C - 26.0°C)
+    // Adjusted weights: OM & Met.no (NWP) get higher share so cold bias from GFS/METAR is
+    // offset — final consensus tracks Google Weather / AccuWeather ground truth more closely.
     const consensusTemp = calcWeighted([
-      { val: gfsTemp, w: 0.40 },
-      { val: wttrTemp, w: 0.40 },
-      { val: omTemp, w: 0.10 },
-      { val: metnoTemp, w: 0.10 }
+      { val: gfsTemp, w: 0.35 },
+      { val: wttrTemp, w: 0.35 },
+      { val: omTemp, w: 0.15 },
+      { val: metnoTemp, w: 0.15 }
     ]) ?? (omTemp ?? 25.0);
 
     // Humidity:
-    // Surface METAR & NOAA GFS provide observed physical air parcel moisture (weights 0.45, 0.45)
-    // Yields 68% - 72% matching Google Weather / AccuWeather
-    const consensusRh = calcWeighted([
-      { val: gfsRh, w: 0.45 },
-      { val: wttrRh, w: 0.45 },
-      { val: omRh, w: 0.05 },
+    // Night-time: NWP models (OM / Met.no) capture nocturnal moisture much better than METAR
+    // Daytime: Surface obs (METAR / GFS) are reliable for boundary-layer humidity
+    const nowHour = new Date().getHours();
+    const isNight = nowHour < 6 || nowHour >= 19;
+    const consensusRh = calcWeighted(isNight ? [
+      { val: omRh,    w: 0.50 },
+      { val: metnoRh, w: 0.45 },
+      { val: gfsRh,   w: 0.05 }
+    ] : [
+      { val: gfsRh,   w: 0.45 },
+      { val: wttrRh,  w: 0.45 },
+      { val: omRh,    w: 0.05 },
       { val: metnoRh, w: 0.05 }
     ]) ?? (metnoRh ?? omRh ?? 65);
 
-    // Rain probability: use Open-Meteo as baseline (explicit calibrated probability field)
-    const consensusPop = omPop ?? 0;
+    // Rain probability:
+    // If surface obs (wttr METAR) + NOAA GFS both report near-zero actual precipitation,
+    // cap OM's probability to prevent false "rain" alerts (Google Weather method: anchor to obs).
+    let consensusPop = omPop ?? 0;
+    if (wttrPrecip < 0.3 && gfsPrecip === 0) {
+      // Observed dry conditions: cap probability hard at 12 % (trace/no rain)
+      consensusPop = Math.min(consensusPop, 12);
+    }
 
     // Wind: consensus across operational models and surface obs
     const consensusWind = calcWeighted([
@@ -2248,17 +2260,39 @@ async function getUnifiedImdWeather({ gpCode = null, stationId = null, locationM
     ]) ?? (omWind ?? 5.0);
 
     // Weather condition:
-    // If surface report or models detect rain/drizzle, align with standard meteorological classification
+    // Only classify as rain/drizzle if ACTUAL precipitation ≥ 0.5 mm is observed.
+    // For trace/dry conditions use cloud cover fraction to pick the descriptive label,
+    // matching Google Weather's "Partly cloudy / Clear / Overcast" convention.
     let consensusCondition = liveCondition;
-    if (wttrDesc) {
-      const low = wttrDesc.toLowerCase();
-      if (low.includes('drizzle') || low.includes('light rain') || low.includes('patchy rain')) {
+    if (wttrPrecip >= 0.5) {
+      // Real precipitation observed — use wttr description
+      const low = (wttrDesc || '').toLowerCase();
+      if (low.includes('heavy')) {
+        consensusCondition = 'Heavy rain';
+      } else if (low.includes('light rain')) {
         consensusCondition = 'Light rain';
+      } else if (low.includes('drizzle')) {
+        consensusCondition = 'Light drizzle';
+      } else if (low.includes('shower')) {
+        consensusCondition = 'Rain showers';
+      } else if (low.includes('thunder')) {
+        consensusCondition = 'Thunderstorm';
       } else {
-        consensusCondition = wttrDesc;
+        consensusCondition = wttrDesc || consensusCondition;
       }
-    } else if ((liveCode === 51 || liveCode === 53 || liveCode === 61 || liveCode === 80) && Number(omPrecip) < 2.5) {
-      consensusCondition = 'Light rain';
+    } else {
+      // Trace / no precipitation: determine condition from cloud cover
+      const cloudPct = metnoCloud != null ? metnoCloud
+        : (wttrCond?.cloudcover != null ? Number(wttrCond.cloudcover) : null);
+      if (cloudPct != null) {
+        if (cloudPct < 20)       consensusCondition = 'Clear sky';
+        else if (cloudPct < 45)  consensusCondition = 'Mainly clear';
+        else if (cloudPct < 70)  consensusCondition = 'Partly cloudy';
+        else                     consensusCondition = 'Overcast';
+      } else {
+        // Fallback: use OM weather code mapping (already in liveCondition)
+        consensusCondition = liveCondition;
+      }
     }
 
     // Build multi-model comparison list
@@ -2698,9 +2732,10 @@ async function getUnifiedImdWeather({ gpCode = null, stationId = null, locationM
     rainStatusNow = 'Light Rain'; rainIconNow = '🌦️'; rainColorNow = 'yellow';
   } else if (nowRateMmH >= 0.1) {
     rainStatusNow = 'Drizzle / Trace Rain'; rainIconNow = '🌂'; rainColorNow = 'yellow';
-  } else if (nowProbPct >= 60) {
+  } else if (nowProbPct >= 65) {
     rainStatusNow = 'Rain Likely Soon'; rainIconNow = dayPhase.isDay ? '🌧️' : '🌧️'; rainColorNow = 'yellow';
-  } else if (nowProbPct >= 30) {
+  } else if (nowProbPct >= 40) {
+    // Only "Possible Shower" if probability is genuinely elevated (not trace/cap artefacts)
     rainStatusNow = 'Possible Shower'; rainIconNow = dayPhase.isDay ? '🌦️' : '🌦️'; rainColorNow = 'yellow';
   } else {
     // Clear — icon depends on day phase
