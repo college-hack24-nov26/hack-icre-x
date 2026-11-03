@@ -374,6 +374,43 @@
             <div id="schemesList" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <!-- Rendered via JavaScript -->
             </div>
+
+            <!-- Official Village Water Sources Table -->
+            <div id="villageSourcesOverview" class="mt-8 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+              <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 border border-cyan-200 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-water"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-sm font-bold text-slate-800">
+                      Official Village Water Sources (<span id="villageSourcesCount">0</span> Registered)
+                    </h4>
+                    <p class="text-xs text-slate-500">Ministry of Jal Shakti ground water and surface water source geo-tag registry.</p>
+                  </div>
+                </div>
+                <span class="text-xs px-2.5 py-1 bg-cyan-50 text-cyan-700 font-semibold rounded-lg border border-cyan-200">
+                  Geo-Tagged Sources
+                </span>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border border-slate-200 rounded-xl overflow-hidden">
+                  <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                    <tr>
+                      <th class="px-4 py-3">#</th>
+                      <th class="px-4 py-3">Source ID</th>
+                      <th class="px-4 py-3">Source Location / Name</th>
+                      <th class="px-4 py-3">Source Category</th>
+                      <th class="px-4 py-3">Water Type</th>
+                      <th class="px-4 py-3">Habitation</th>
+                    </tr>
+                  </thead>
+                  <tbody id="villageSourcesTableBody" class="divide-y divide-slate-100">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
           <!-- ================= TAB 2: WATER QUALITY & NEAREST LAB ================= -->
@@ -2081,9 +2118,54 @@
                 <span class="w-3 h-3 rounded-full bg-teal-600 -mr-1"></span>
               </div>
             </div>
+
+            <!-- Tagged Sources & Infrastructure Details -->
+            ${sc.sources && sc.sources.length > 0 ? `
+              <div class="px-6 py-3 bg-slate-100/60 border-t border-slate-200 text-xs flex flex-wrap items-center gap-2">
+                <span class="font-bold text-slate-700 flex items-center gap-1.5">
+                  <i class="fa-solid fa-water text-cyan-600"></i> Scheme Sources (${sc.sources.length}):
+                </span>
+                ${sc.sources.map(src => `
+                  <span class="px-2.5 py-0.5 rounded-full bg-cyan-100/80 text-cyan-900 border border-cyan-200 text-[11px] font-medium flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-cyan-600"></span>
+                    ${src.sourceName || 'Source'} [${src.type || 'Surface Water'}]
+                  </span>
+                `).join('')}
+              </div>
+            ` : `
+              <div class="px-6 py-2.5 bg-slate-100/40 border-t border-slate-200 text-xs text-slate-500 italic">
+                <i class="fa-solid fa-info-circle mr-1"></i> No individual water sources registered specifically under this scheme in JJM IMIS database.
+              </div>
+            `}
           `;
           schemesList.appendChild(card);
         });
+      }
+
+      // Populate Village Water Sources Table
+      const vSources = d.waterSources?.sources || [];
+      const sourcesCountEl = document.getElementById('villageSourcesCount');
+      if (sourcesCountEl) sourcesCountEl.textContent = vSources.length;
+      const vSourcesTbody = document.getElementById('villageSourcesTableBody');
+      if (vSourcesTbody) {
+        vSourcesTbody.innerHTML = '';
+        if (vSources.length > 0) {
+          vSources.forEach((src, idx) => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-slate-50 transition';
+            row.innerHTML = `
+              <td class="px-4 py-3 font-semibold text-slate-600">${idx + 1}</td>
+              <td class="px-4 py-3 font-mono font-bold text-sky-700">${src.sourceId || '--'}</td>
+              <td class="px-4 py-3 font-medium text-slate-800">${src.location || src.sourceName}</td>
+              <td class="px-4 py-3 text-slate-600"><span class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-cyan-50 text-cyan-700 border border-cyan-200">${src.sourceTypeCategory || 'Surface Water'}</span></td>
+              <td class="px-4 py-3 text-slate-700 font-semibold">${src.sourceType || 'River'}</td>
+              <td class="px-4 py-3 text-slate-600">${src.habitationName || d.location.village}</td>
+            `;
+            vSourcesTbody.appendChild(row);
+          });
+        } else {
+          vSourcesTbody.innerHTML = '<tr><td colspan="6" class="px-4 py-6 text-center text-slate-400">No geo-tagged water sources registered in this village.</td></tr>';
+        }
       }
 
       // ================= TAB 2: WATER QUALITY & LAB (SCREENSHOT 2 & 4 & 6) =================

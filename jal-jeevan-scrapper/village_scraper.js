@@ -549,73 +549,24 @@ async function getDistricts(stateInput) {
   };
 }
 
-async function getVillages(stateInput, districtInput) {
-  const districtData = await getDistricts(stateInput);
-  const state = districtData.state;
-  const districts = districtData.districts;
+const { scrapeOfficialVillageLive, searchVillageLive } = require('./live_jjm_scraper');
 
-  const districtsDict = {};
-  districts.forEach((d) => (districtsDict[d.name] = d.code));
-  const matchedDistrict = matchOption(districtInput, districtsDict, 'District');
-
-  const cacheKey = `${state.code}_${matchedDistrict.code}`;
-  if (cache.villages[cacheKey]) {
+async function getVillages(stateInput, districtInput, query = '') {
+  try {
+    const list = await searchVillageLive(stateInput, districtInput, query);
     return {
-      state,
-      district: matchedDistrict,
-      villages: cache.villages[cacheKey],
+      state: stateInput,
+      district: districtInput,
+      villages: list || [],
+    };
+  } catch (err) {
+    console.warn('[village_scraper] searchVillageLive warning:', err.message);
+    return {
+      state: stateInput,
+      district: districtInput,
+      villages: [],
     };
   }
-
-  const client = createHttpClient();
-  const res1 = await client.get('');
-  const $1 = cheerio.load(res1.data);
-  const fields1 = extractFormFields($1);
-
-  fields1['__EVENTTARGET'] = 'ddState';
-  fields1['__EVENTARGUMENT'] = '';
-  fields1['ddState'] = state.code;
-  const res2 = await client.post('', toFormData(fields1), {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  });
-  const $2 = cheerio.load(res2.data);
-  const fields2 = extractFormFields($2);
-
-  fields2['__EVENTTARGET'] = 'ddDistrict';
-  fields2['__EVENTARGUMENT'] = '';
-  fields2['ddState'] = state.code;
-  fields2['ddDistrict'] = matchedDistrict.code;
-  const res3 = await client.post('', toFormData(fields2), {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  });
-  const $3 = cheerio.load(res3.data);
-
-  const villages = [];
-  $3('#ddList option').each((_, el) => {
-    const val = $3(el).attr('value');
-    const text = $3(el).text().trim();
-    if (val && val !== '-1') {
-      const parts = val.split('/');
-      const textParts = text.split('/').map((s) => s.trim());
-      villages.push({
-        rawVal: val,
-        rawText: text,
-        blockId: parts[0] || '',
-        panchayatId: parts[1] || '',
-        villageId: parts[2] || '',
-        blockName: textParts[0] || '',
-        panchayatName: textParts[1] || '',
-        villageName: textParts[2] || text,
-      });
-    }
-  });
-
-  cache.villages[cacheKey] = villages;
-  return {
-    state,
-    district: matchedDistrict,
-    villages,
-  };
 }
 
 async function getVillageInformation(request, verbose = false) {
@@ -623,150 +574,7 @@ async function getVillageInformation(request, verbose = false) {
   if (!state || !district || !village) {
     throw new Error('Please provide state, district, and village in the request parameters.');
   }
-
-  const log = (...args) => {
-    if (verbose) console.log('[JJM Scraper]', ...args);
-  };
-
-  const client = createHttpClient();
-
-  log('1/5 Fetching initial page and states list...');
-  const res1 = await client.get('');
-  const $1 = cheerio.load(res1.data);
-  const fields1 = extractFormFields($1);
-
-  const statesDict = {};
-  $1('#ddState option').each((_, el) => {
-    const code = $1(el).attr('value');
-    const name = $1(el).text().trim();
-    if (code && code !== '-1') {
-      statesDict[name] = code;
-    }
-  });
-
-  const matchedState = matchOption(state, statesDict, 'State');
-  log(`Selected State: ${matchedState.name} (Code: ${matchedState.code})`);
-
-  log(`2/5 Selecting State "${matchedState.name}"...`);
-  fields1['__EVENTTARGET'] = 'ddState';
-  fields1['__EVENTARGUMENT'] = '';
-  fields1['ddState'] = matchedState.code;
-
-  const res2 = await client.post('', toFormData(fields1), {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  });
-  const $2 = cheerio.load(res2.data);
-  const fields2 = extractFormFields($2);
-
-  const districtsDict = {};
-  $2('#ddDistrict option').each((_, el) => {
-    const code = $2(el).attr('value');
-    const name = $2(el).text().trim();
-    if (code && code !== '-1') {
-      districtsDict[name] = code;
-    }
-  });
-
-  if (Object.keys(districtsDict).length === 0) {
-    throw new Error(`No districts found under state "${matchedState.name}".`);
-  }
-
-  const matchedDistrict = matchOption(district, districtsDict, 'District');
-  log(`Selected District: ${matchedDistrict.name} (Code: ${matchedDistrict.code})`);
-
-  log(`3/5 Selecting District "${matchedDistrict.name}"...`);
-  fields2['__EVENTTARGET'] = 'ddDistrict';
-  fields2['__EVENTARGUMENT'] = '';
-  fields2['ddState'] = matchedState.code;
-  fields2['ddDistrict'] = matchedDistrict.code;
-
-  const res3 = await client.post('', toFormData(fields2), {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  });
-  const $3 = cheerio.load(res3.data);
-  const fields3 = extractFormFields($3);
-
-  const villageOptions = [];
-  $3('#ddList option').each((_, el) => {
-    const val = $3(el).attr('value');
-    const text = $3(el).text().trim();
-    if (val && val !== '-1') {
-      const parts = val.split('/');
-      const textParts = text.split('/').map((s) => s.trim());
-      villageOptions.push({
-        rawVal: val,
-        rawText: text,
-        blockId: parts[0] || '',
-        panchayatId: parts[1] || '',
-        villageId: parts[2] || '',
-        blockName: textParts[0] || '',
-        panchayatName: textParts[1] || '',
-        villageName: textParts[2] || text,
-      });
-    }
-  });
-
-  if (villageOptions.length === 0) {
-    throw new Error(`No villages found for district "${matchedDistrict.name}".`);
-  }
-
-  const qVillage = String(village).trim().toLowerCase();
-  let matchedVillage = villageOptions.find((v) => v.villageId === qVillage);
-  if (!matchedVillage) matchedVillage = villageOptions.find((v) => v.villageName.toLowerCase() === qVillage);
-  if (!matchedVillage) matchedVillage = villageOptions.find((v) => v.rawText.toLowerCase() === qVillage);
-  if (!matchedVillage) {
-    matchedVillage = villageOptions.find(
-      (v) => v.villageName.toLowerCase().includes(qVillage) || v.rawText.toLowerCase().includes(qVillage)
-    );
-  }
-
-  if (!matchedVillage) {
-    const sample = villageOptions.slice(0, 10).map((v) => v.villageName).join(', ');
-    throw new Error(`Village "${village}" not found in district "${matchedDistrict.name}". Examples: ${sample}...`);
-  }
-
-  log(`Selected Village: ${matchedVillage.villageName} (ID: ${matchedVillage.villageId})`);
-
-  log('4/5 Requesting detailed village information (btnShow)...');
-  fields3['__EVENTTARGET'] = '';
-  fields3['__EVENTARGUMENT'] = '';
-  fields3['ddState'] = matchedState.code;
-  fields3['ddDistrict'] = matchedDistrict.code;
-  fields3['ddList'] = matchedVillage.rawVal;
-  fields3['hidVillageId'] = matchedVillage.villageId;
-  fields3['hidVillagename'] = matchedVillage.rawText;
-  fields3['BlockID'] = matchedVillage.blockId;
-  fields3['PanchyatID'] = matchedVillage.panchayatId;
-  fields3['VillageID'] = matchedVillage.villageId;
-  fields3['txtvillname'] = `${matchedVillage.villageId} (${matchedVillage.rawText})`;
-  fields3['btnShow'] = 'Show';
-
-  const res4 = await client.post('', toFormData(fields3), {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  });
-
-  const parsedData = parseVillageHtml(res4.data);
-
-  log('5/5 Fetching Water Source charts & Laboratory sample test records...');
-  const [sourceCharts, labSampleDetails] = await Promise.all([
-    fetchSourceQualityCharts(matchedVillage.villageId),
-    fetchLaboratorySampleDetails(matchedVillage.villageId),
-  ]);
-
-  parsedData.waterQuality.sourceQualityCharts = sourceCharts;
-  parsedData.waterQuality.laboratorySampleDetails = labSampleDetails;
-
-  return {
-    success: true,
-    query: {
-      state: matchedState.name,
-      district: matchedDistrict.name,
-      village: matchedVillage.villageName,
-    },
-    fetchedAt: new Date().toISOString(),
-    sourceUrl: BASE_URL,
-    data: parsedData,
-  };
+  return await scrapeOfficialVillageLive(state, district, village, verbose);
 }
 
 module.exports = {
@@ -774,6 +582,8 @@ module.exports = {
   getDistricts,
   getVillages,
   getVillageInformation,
+  scrapeOfficialVillageLive,
+  searchVillageLive,
 };
 
 if (require.main === module) {

@@ -21,8 +21,9 @@ async function main() {
     console.log(`Schools with tap: ${result.data.institutions.schools.withTapConnections} / ${result.data.institutions.schools.total}`);
     console.log(`Anganwadis with tap: ${result.data.institutions.anganwadis.withTapConnections} / ${result.data.institutions.anganwadis.total}`);
     console.log('\nWater Quality Parameters:');
-    for (const p of result.data.waterQuality.chemicalParameters) {
-      console.log(`  - ${p.parameter}: ${p.value}`);
+    const chem = result.data.waterQuality.chemicalTests || result.data.waterQuality.chemicalParameters || [];
+    for (const p of chem) {
+      console.log(`  - ${p.parameterName || p.parameter}: ${p.testResult || p.value}`);
     }
   } catch (err) {
     console.error('Error fetching village information:', err.message);
