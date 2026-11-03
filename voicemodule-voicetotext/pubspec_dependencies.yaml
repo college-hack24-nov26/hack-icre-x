@@ -1,0 +1,11 @@
+# Copy and paste these lines into your target app's pubspec.yaml under 'dependencies:'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Required by Voice Module:
+  speech_to_text: ^7.5.0       # Marathi & English voice recognition
+  shared_preferences: ^2.5.6   # Offline case storage & API key persistence
+  http: ^1.6.0                 # Gemini 1.5/2.5/3.5 Flash AI API calls
+
