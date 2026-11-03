@@ -63,16 +63,51 @@ async function fetchDistrictVillagesLive(stateName, districtName) {
   if (districtVillagesCache[cacheKey]) return districtVillagesCache[cacheKey];
 
   const states = getWeatherStates();
-  const cleanState = (stateName || '').replace(/\(\d+\)/g, '').trim().toLowerCase();
-  const s = states.find(st => st.name.toLowerCase() === cleanState || cleanState.includes(st.name.toLowerCase()) || st.name.toLowerCase().includes(cleanState));
+  const cleanState = (stateName || '').replace(/\(\d+\)/g, '').replace(/[^a-zA-Z]/g, '').toLowerCase();
+  let s = states.find(st => {
+    const norm = st.name.replace(/[^a-zA-Z]/g, '').toLowerCase();
+    return norm === cleanState || norm.includes(cleanState) || cleanState.includes(norm);
+  });
+  if (!s) {
+    // Alternate aliases for union territories / states
+    if (cleanState.includes('orissa')) s = states.find(st => st.name === 'Odisha');
+    else if (cleanState.includes('pondicherry')) s = states.find(st => st.name === 'Puducherry');
+    else if (cleanState.includes('uttaranchal')) s = states.find(st => st.name === 'Uttarakhand');
+    else if (cleanState.includes('daman') || cleanState.includes('diu') || cleanState.includes('dadra')) s = states.find(st => st.code === '26');
+  }
   if (!s) return [];
 
   const zillas = await getZillaPanchayats(s.code);
-  const cleanDist = (districtName || '').replace(/\(\d+\)/g, '').trim().toLowerCase();
-  const z = zillas.find(zd => zd.name.toLowerCase() === cleanDist || cleanDist.includes(zd.name.toLowerCase()) || zd.name.toLowerCase().includes(cleanDist));
+  const cleanDist = (districtName || '').replace(/\(\d+\)/g, '').replace(/[^a-zA-Z]/g, '').toLowerCase();
+  let z = zillas.find(zd => {
+    const norm = zd.name.replace(/[^a-zA-Z]/g, '').toLowerCase();
+    return norm === cleanDist || norm.includes(cleanDist) || cleanDist.includes(norm);
+  });
+  if (!z && zillas.length > 0) {
+    // If not exact, try startsWith or contains
+    z = zillas.find(zd => {
+      const norm = zd.name.toLowerCase();
+      return norm.startsWith(cleanDist.slice(0, 4)) || cleanDist.startsWith(norm.slice(0, 4));
+    });
+  }
   if (!z) return [];
 
   const blocks = await getBlockPanchayats(z.code);
+  if (!blocks || blocks.length === 0) {
+    const fallbackList = [{
+      rawVal: `${z.name}/${z.name}/${z.name}`,
+      rawText: `${z.name} (District Headquarters)`,
+      villageName: z.name,
+      panchayatName: z.name,
+      blockName: z.name,
+      villageId: z.code || '',
+      blockId: z.code || '',
+      panchayatId: z.code || ''
+    }];
+    districtVillagesCache[cacheKey] = fallbackList;
+    return fallbackList;
+  }
+
   const gpPromises = blocks.map(async b => {
     try {
       const gps = await getGramPanchayats(b.code, { blockName: b.name, districtName: z.name, stateName: s.name });

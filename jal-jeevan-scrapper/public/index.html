@@ -152,6 +152,7 @@
             <span>3. Village</span>
             <span id="villSpinner" class="hidden text-sky-600"><i class="fa-solid fa-circle-notch fa-spin text-xs"></i></span>
           </label>
+          <input type="text" id="jjmVillageSearch" placeholder="🔍 Search village / Gram Panchayat..." class="hidden w-full mb-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-sm">
           <div class="relative">
             <select id="villageSelect" disabled class="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-sky-500 focus:bg-white focus:outline-none transition appearance-none cursor-not-allowed pr-10 font-medium text-slate-400">
               <option value="">-- First select a district --</option>
@@ -1793,7 +1794,10 @@
       const selectedState = stateSelect.value;
       const selectedDistrict = districtSelect.value;
 
-      villageSelect.innerHTML = '<option value="">-- Loading villages... --</option>';
+      const jjmSearchInput = document.getElementById('jjmVillageSearch');
+      if (jjmSearchInput) jjmSearchInput.classList.add('hidden');
+
+      villageSelect.innerHTML = '<option value="">⏳ Fetching live villages across all blocks... --</option>';
       villageSelect.disabled = true;
       btnFetch.disabled = true;
 
@@ -1809,15 +1813,34 @@
         if (!data.success) throw new Error(data.error);
 
         villagesList = Array.isArray(data.villages) ? data.villages : (data.villages && data.villages.villages ? data.villages.villages : []);
-        villageSelect.innerHTML = `<option value="">-- Choose Village (${villagesList.length} available) --</option>`;
-        villagesList.forEach(v => {
-          const opt = document.createElement('option');
-          opt.value = v.villageName;
-          opt.dataset.id = v.villageId;
-          opt.dataset.raw = v.rawVal;
-          opt.textContent = `${v.villageName} (${v.panchayatName || 'GP'}, ${v.blockName || 'Block'})`;
-          villageSelect.appendChild(opt);
-        });
+        
+        function renderVillageOptions(list) {
+          villageSelect.innerHTML = `<option value="">-- Choose Village (${list.length} available) --</option>`;
+          list.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.villageName;
+            opt.dataset.id = v.villageId;
+            opt.dataset.raw = v.rawVal;
+            opt.textContent = `${v.villageName} (${v.panchayatName || 'GP'}, ${v.blockName || 'Block'})`;
+            villageSelect.appendChild(opt);
+          });
+        }
+
+        renderVillageOptions(villagesList);
+
+        if (jjmSearchInput) {
+          jjmSearchInput.classList.remove('hidden');
+          jjmSearchInput.value = '';
+          jjmSearchInput.oninput = (e) => {
+            const q = (e.target.value || '').trim().toLowerCase();
+            const filtered = villagesList.filter(v => 
+              (v.villageName && v.villageName.toLowerCase().includes(q)) ||
+              (v.panchayatName && v.panchayatName.toLowerCase().includes(q)) ||
+              (v.blockName && v.blockName.toLowerCase().includes(q))
+            );
+            renderVillageOptions(filtered);
+          };
+        }
 
         villageSelect.disabled = false;
         villageSelect.className = villageSelect.className.replace('bg-slate-100', 'bg-slate-50').replace('cursor-not-allowed', 'cursor-pointer').replace('text-slate-400', 'text-slate-800');
