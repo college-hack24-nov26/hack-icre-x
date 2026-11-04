@@ -290,6 +290,10 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
       danger: danger,
       durationSec: _durationSec,
       risk: risk,
+      isForwardedToDoctor: true,
+      priority: danger.isNotEmpty ? 'urgent' : 'normal',
+      doctorStatus: 'pending',
+      ashaName: widget.userName,
     );
     debugPrint('Saved case successfully: ${savedRow.id}, patient: ${savedRow.patientName}');
 
@@ -2895,10 +2899,10 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
   // ==========================================
   Widget _buildCasesTab() {
     final dangerCount = _savedCases.where((r) => r.severityFlag).length;
-    final forwardedCount = _savedCases.where((r) => r.isForwardedToDoctor).length;
+    final forwardedCount = _savedCases.where((r) => r.isForwardedToDoctor || r.doctorStatus == 'pending' || r.doctorStatus == 'reviewed').length;
     final filtered = _savedCases.where((r) {
       if (_casesFilter == 'danger') return r.severityFlag;
-      if (_casesFilter == 'forwarded') return r.isForwardedToDoctor;
+      if (_casesFilter == 'forwarded') return r.isForwardedToDoctor || r.doctorStatus == 'pending' || r.doctorStatus == 'reviewed';
       return true;
     }).toList();
 

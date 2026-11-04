@@ -276,14 +276,175 @@ class FirebaseService {
   }
 
   // ---------------------------------------------------------------------------
-  // 3. INITIAL DATABASE SEEDING (COMPLETING THE SYSTEM CIRCLE)
+  // 3. IOT SENSOR DATA, THRESHOLDS & VALUE MISMATCH MONITORING
+  // ---------------------------------------------------------------------------
+
+  /// Fetch live SENSOR_DATA directly from Firebase: /SENSOR_DATA.json
+  Future<Map<String, dynamic>?> fetchSensorData() async {
+    try {
+      final url = Uri.parse('$databaseBaseUrl/SENSOR_DATA.json');
+      final res = await _client.get(url).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200 && res.body.isNotEmpty && res.body != 'null') {
+        final decoded = jsonDecode(res.body);
+        if (decoded is Map) {
+          return Map<String, dynamic>.from(decoded);
+        }
+      }
+    } catch (e) {
+      debugPrint('FirebaseService.fetchSensorData error: $e');
+    }
+    return null;
+  }
+
+  /// Fetch CONFIG limits directly from Firebase: /CONFIG.json
+  Future<Map<String, dynamic>?> fetchConfig() async {
+    try {
+      final url = Uri.parse('$databaseBaseUrl/CONFIG.json');
+      final res = await _client.get(url).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200 && res.body.isNotEmpty && res.body != 'null') {
+        final decoded = jsonDecode(res.body);
+        if (decoded is Map) {
+          return Map<String, dynamic>.from(decoded);
+        }
+      }
+    } catch (e) {
+      debugPrint('FirebaseService.fetchConfig error: $e');
+    }
+    return null;
+  }
+
+  /// Fetch latest test record from Firebase: /TEST_RESULTS.json
+  Future<Map<String, dynamic>?> fetchLatestTestResult() async {
+    try {
+      final url = Uri.parse('$databaseBaseUrl/TEST_RESULTS.json');
+      final res = await _client.get(url).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200 && res.body.isNotEmpty && res.body != 'null') {
+        final decoded = jsonDecode(res.body);
+        if (decoded is Map && decoded.isNotEmpty) {
+          Map<String, dynamic>? latest;
+          num maxMs = 0;
+          decoded.forEach((k, v) {
+            if (v is Map) {
+              final ms = (v['endMs'] is num)
+                  ? (v['endMs'] as num)
+                  : ((v['startMs'] is num) ? (v['startMs'] as num) : 0);
+              if (ms >= maxMs) {
+                maxMs = ms;
+                latest = Map<String, dynamic>.from(v);
+              }
+            }
+          });
+          return latest;
+        }
+      }
+    } catch (e) {
+      debugPrint('FirebaseService.fetchLatestTestResult error: $e');
+    }
+    return null;
+  }
+
+  /// Evaluates IoT sensor reading against CONFIG limits from the IoT RTDB tags.
+  /// If values exceed limits (e.g. TDS > tdsMax or Turbidity > turbidityMax or chlorinationRequired),
+  /// returns a structured [IotMismatchAlert] for alerting Jalrakshak / Citizen.
+  Future<IotMismatchAlert?> checkIotMismatch() async {
+    try {
+      final config = await fetchConfig() ?? {'tdsMax': 500, 'turbidityMax': 5, 'maxDoseMl': 50};
+      final sensor = await fetchSensorData();
+      final latestTest = await fetchLatestTestResult();
+
+      final double tdsLimit = (config['tdsMax'] is num) ? (config['tdsMax'] as num).toDouble() : 500.0;
+      final double turbidityLimit = (config['turbidityMax'] is num) ? (config['turbidityMax'] as num).toDouble() : 5.0;
+
+      // 1. Check live SENSOR_DATA
+      if (sensor != null) {
+        final double? sensorTds = (sensor['TDS'] is num) ? (sensor['TDS'] as num).toDouble() : null;
+        final double? sensorTurb = (sensor['TurbidityNTU_Estimate'] is num)
+            ? (sensor['TurbidityNTU_Estimate'] as num).toDouble()
+            : ((sensor['Turbidity'] is num) ? (sensor['Turbidity'] as num).toDouble() : null);
+
+        if (sensorTds != null && sensorTds > tdsLimit) {
+          return IotMismatchAlert(
+            id: 'tds-sensor-${DateTime.now().millisecondsSinceEpoch}',
+            title: '⚠️ आयओटी इशारा: TDS मर्यादा ओलांडली!',
+            subtitle: 'पाण्यातील एकूण विरघळलेले क्षार सुरक्षित निकषापेक्षा जास्त आहेत.',
+            parameter: 'TDS (क्षार)',
+            currentValue: sensorTds,
+            threshold: tdsLimit,
+            unit: 'ppm',
+            source: 'SENSOR_DATA.TDS',
+            recommendation: 'पाणी त्वरित उकळून प्यावे व जलसुरक्षकाने स्त्रोत शुद्धीकरण करावे.',
+            detectedAt: DateTime.now(),
+          );
+        }
+
+        if (sensorTurb != null && sensorTurb > turbidityLimit) {
+          return IotMismatchAlert(
+            id: 'turb-sensor-${DateTime.now().millisecondsSinceEpoch}',
+            title: '⚠️ आयओटी इशारा: पाणी गढूळ आढळले!',
+            subtitle: 'पाण्याचा गढूळपणा सुरक्षित मर्यादेपेक्षा (५ NTU) जास्त नोंदवला गेला आहे.',
+            parameter: 'Turbidity (गढूळपणा)',
+            currentValue: sensorTurb,
+            threshold: turbidityLimit,
+            unit: 'NTU',
+            source: 'SENSOR_DATA.Turbidity',
+            recommendation: 'पाण्यात तुरटी फिरवून गाळून घ्यावे व क्लोरीनेशन डोस द्यावा.',
+            detectedAt: DateTime.now(),
+          );
+        }
+      }
+
+      // 2. Check latest TEST_RESULTS
+      if (latestTest != null) {
+        final bool chlorReq = latestTest['chlorinationRequired'] == true;
+        final double testTds = (latestTest['TDS'] is num) ? (latestTest['TDS'] as num).toDouble() : 0.0;
+        final double testTurb = (latestTest['Turbidity'] is num) ? (latestTest['Turbidity'] as num).toDouble() : 0.0;
+        final String waterStatus = (latestTest['waterStatus'] ?? '').toString();
+
+        if (chlorReq || waterStatus.toLowerCase().contains('alert') || waterStatus.toLowerCase().contains('contaminat')) {
+          return IotMismatchAlert(
+            id: 'test-chlor-${latestTest['testId'] ?? DateTime.now().millisecondsSinceEpoch}',
+            title: '⚠️ आयओटी चाचणी इशारा: तातडीचे क्लोरीनेशन आवश्यक!',
+            subtitle: 'जल चाचणी अहवालानुसार पाण्याच्या स्त्रोतामध्ये तात्काळ निर्जंतुकीकरण आवश्यक आहे.',
+            parameter: 'Chlorination Status',
+            currentValue: testTurb > 0 ? testTurb : 1.0,
+            threshold: 0.0,
+            unit: 'Alert',
+            source: 'TEST_RESULTS.${latestTest['testId'] ?? 'latest'}',
+            recommendation: 'जलसुरक्षकाने लगेच विहिरीत / टाकीत निर्धारित टीसीएल (TCL) डोस टाकावा.',
+            detectedAt: DateTime.now(),
+          );
+        }
+
+        if (testTds > tdsLimit) {
+          return IotMismatchAlert(
+            id: 'test-tds-${latestTest['testId'] ?? DateTime.now().millisecondsSinceEpoch}',
+            title: '⚠️ चाचणी अहवाल: TDS मर्यादा ओलांडली!',
+            subtitle: 'प्रयोगशाळा/IoT चाचणीत TDS सुरक्षित मर्यादेपेक्षा जास्त आढळला आहे.',
+            parameter: 'TDS (क्षार)',
+            currentValue: testTds,
+            threshold: tdsLimit,
+            unit: 'ppm',
+            source: 'TEST_RESULTS.${latestTest['testId'] ?? 'latest'}',
+            recommendation: 'नागरिकांनी पाणी किमान २० मिनिटे उकळून प्यावे.',
+            detectedAt: DateTime.now(),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('checkIotMismatch error: $e');
+    }
+    return null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // 4. INITIAL DATABASE SEEDING (COMPLETING THE SYSTEM CIRCLE)
   // ---------------------------------------------------------------------------
 
   /// Seeds default users and initial sample voice cases into Firebase if empty
   Future<void> seedInitialDataIfNeeded() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      if (prefs.getBool('firebase_seeded_v2') == true) return;
+      if (prefs.getBool('firebase_seeded_v3') == true) return;
 
       // Seed standard staff
       final defaultUsers = [
@@ -302,13 +463,46 @@ class FirebaseService {
       // Seed initial high-priority cases from LocalStore
       final demoCases = LocalStore.initialDemoCases;
       for (final c in demoCases) {
-        await saveVoiceCase(c, ashaId: 'ASHA-402', ashaName: 'Sunita Kamble');
+        // Ensure both demo cases are forwarded to Doctor so Doctor triage has immediate data
+        final fwdCase = c.copyWith(
+          isForwardedToDoctor: true,
+          doctorStatus: c.doctorStatus == 'reviewed' ? 'reviewed' : 'pending',
+          priority: c.severityFlag ? 'urgent' : 'normal',
+        );
+        await saveVoiceCase(fwdCase, ashaId: 'ASHA-402', ashaName: 'Sunita Kamble');
       }
 
-      await prefs.setBool('firebase_seeded_v2', true);
-      debugPrint('Firebase initial data seeded successfully.');
+      await prefs.setBool('firebase_seeded_v3', true);
+      debugPrint('Firebase initial data seeded successfully (v3 with doctor sync).');
     } catch (e) {
       debugPrint('seedInitialDataIfNeeded error: $e');
     }
   }
+}
+
+/// Model representing a detected IoT sensor mismatch from Firebase RTDB (SENSOR_DATA/CONFIG/TEST_RESULTS)
+class IotMismatchAlert {
+  final String id;
+  final String title;
+  final String subtitle;
+  final String parameter;
+  final double currentValue;
+  final double threshold;
+  final String unit;
+  final String source;
+  final String recommendation;
+  final DateTime detectedAt;
+
+  IotMismatchAlert({
+    required this.id,
+    required this.title,
+    required this.subtitle,
+    required this.parameter,
+    required this.currentValue,
+    required this.threshold,
+    required this.unit,
+    required this.source,
+    required this.recommendation,
+    required this.detectedAt,
+  });
 }

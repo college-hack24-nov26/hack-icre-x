@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/firebase_service.dart';
 
 // --- DATA MODELS ---
 
@@ -1379,6 +1381,11 @@ class LocalStore {
       inputMode: 'typed',
       provenance: 'live',
       durationSec: 0,
+      isForwardedToDoctor: true,
+      forwardedAt: DateTime.now().subtract(const Duration(hours: 3)).toIso8601String(),
+      doctorNotes: 'आशा सेविकेने प्राथमिक तपासणी करून पाठवले',
+      priority: 'normal',
+      doctorStatus: 'pending',
     ),
   ];
 
@@ -1403,30 +1410,74 @@ class LocalStore {
     } catch (_) {}
   }
 
-  static Future<List<SavedCaseRow>> all() async {
+  /// Fetch all cases, merging with Firebase Realtime Database (/voice_cases.json)
+  /// Ensures cases recorded by ASHA workers across all sessions/devices are visible to Doctors.
+  static Future<List<SavedCaseRow>> all({bool syncWithFirebase = true}) async {
     await ensureSeeded();
+    List<SavedCaseRow> localCases = [];
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(casesKey);
-      if (raw == null || raw.isEmpty) return List.from(_initialDemoCases);
+      if (raw != null && raw.isNotEmpty) {
+        final List decoded = jsonDecode(raw);
+        final identRaw = prefs.getString(identKey);
+        final Map<String, dynamic> idents = identRaw != null ? jsonDecode(identRaw) : {};
 
-      final List decoded = jsonDecode(raw);
-      final identRaw = prefs.getString(identKey);
-      final Map<String, dynamic> idents = identRaw != null ? jsonDecode(identRaw) : {};
-
-      return decoded.map((e) {
-        final row = SavedCaseRow.fromJson(Map<String, dynamic>.from(e as Map));
-        final resolvedName = row.patientName ?? idents[row.patientPseudoId] as String?;
-        if (resolvedName != row.patientName) {
-          return row.copyWith(patientName: resolvedName);
-        }
-        return row;
-      }).toList();
+        localCases = decoded.map((e) {
+          final row = SavedCaseRow.fromJson(Map<String, dynamic>.from(e as Map));
+          final resolvedName = row.patientName ?? idents[row.patientPseudoId] as String?;
+          if (resolvedName != row.patientName) {
+            return row.copyWith(patientName: resolvedName);
+          }
+          return row;
+        }).toList();
+      } else {
+        localCases = List.from(_initialDemoCases);
+      }
     } catch (_) {
-      return List.from(_initialDemoCases);
+      localCases = List.from(_initialDemoCases);
     }
+
+    if (syncWithFirebase) {
+      try {
+        final remoteCases = await FirebaseService.instance.fetchVoiceCases();
+        if (remoteCases.isNotEmpty) {
+          final Map<String, SavedCaseRow> merged = {};
+          // Start with local cases
+          for (final c in localCases) {
+            merged[c.id] = c;
+          }
+          // Merge remote cases (remote is source of truth for synced entries)
+          for (final rc in remoteCases) {
+            final existing = merged[rc.id];
+            if (existing == null) {
+              merged[rc.id] = rc;
+            } else {
+              // Remote wins if it's already reviewed or forwarded
+              if (rc.doctorStatus == 'reviewed' || rc.isForwardedToDoctor) {
+                merged[rc.id] = rc;
+              }
+            }
+          }
+          final result = merged.values.toList();
+          result.sort((a, b) => b.savedAt.compareTo(a.savedAt));
+
+          // Cache merged list locally for offline availability
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(casesKey, jsonEncode(result.map((e) => e.toJson()).toList()));
+          return result;
+        }
+      } catch (e) {
+        debugPrint('LocalStore.all Firebase sync error: $e');
+      }
+    }
+
+    return localCases;
   }
 
+  /// Save new patient case from voice/manual entry.
+  /// Automatically marks as forwarded to Doctor (doctorStatus: 'pending') and
+  /// synchronizes to Firebase Realtime Database (/voice_cases/{id}.json)
   static Future<SavedCaseRow> saveFromExtraction(
     VoiceExtraction x, {
     required String villageId,
@@ -1434,14 +1485,21 @@ class LocalStore {
     required List<String> danger,
     required int durationSec,
     WaterRiskAssessment? risk,
-    bool isForwardedToDoctor = false,
+    bool isForwardedToDoctor = true,
     String? doctorNotes,
-    String priority = 'normal',
-    String doctorStatus = 'none',
+    String? priority,
+    String doctorStatus = 'pending',
+    String? ashaId,
+    String? ashaName,
   }) async {
     await ensureSeeded();
     final r = risk ?? computeWaterRisk(x);
     final age = x.ageYears.value;
+    final effectivePriority = priority ?? (danger.isNotEmpty ? 'urgent' : 'normal');
+    final effectiveDoctorNotes = doctorNotes ??
+        (danger.isNotEmpty
+            ? 'धोक्याची लक्षणे आढळली - तातडीने डॉक्टर तपासणी आवश्यक'
+            : 'आशा सेविकेने तपासणी व उपचारासाठी पाठवले');
 
     final row = SavedCaseRow(
       id: 'case-${DateTime.now().millisecondsSinceEpoch}',
@@ -1480,14 +1538,14 @@ class LocalStore {
       durationSec: durationSec,
       isForwardedToDoctor: isForwardedToDoctor,
       forwardedAt: isForwardedToDoctor ? DateTime.now().toIso8601String() : null,
-      doctorNotes: doctorNotes,
-      priority: priority,
+      doctorNotes: effectiveDoctorNotes,
+      priority: effectivePriority,
       doctorStatus: doctorStatus,
     );
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cases = await all();
+      final cases = await all(syncWithFirebase: false);
       cases.insert(0, row);
       await prefs.setString(casesKey, jsonEncode(cases.map((e) => e.toJson()).toList()));
 
@@ -1499,6 +1557,18 @@ class LocalStore {
       }
     } catch (_) {}
 
+    // Synchronize to Firebase Realtime Database
+    try {
+      await FirebaseService.instance.saveVoiceCase(
+        row,
+        ashaId: ashaId ?? 'ASHA-402',
+        ashaName: ashaName ?? 'Sunita Kamble',
+      );
+      debugPrint('Case synchronized to Firebase successfully: ${row.id}');
+    } catch (e) {
+      debugPrint('LocalStore.saveFromExtraction Firebase sync error: $e');
+    }
+
     return row;
   }
 
@@ -1506,10 +1576,12 @@ class LocalStore {
     String caseId, {
     String? notes,
     String priority = 'normal',
+    String? ashaId,
+    String? ashaName,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cases = await all();
+      final cases = await all(syncWithFirebase: false);
       final idx = cases.indexWhere((c) => c.id == caseId);
       if (idx != -1) {
         cases[idx] = cases[idx].copyWith(
@@ -1522,17 +1594,31 @@ class LocalStore {
         await prefs.setString(casesKey, jsonEncode(cases.map((e) => e.toJson()).toList()));
       }
     } catch (_) {}
+
+    // Synchronize forward action to Firebase
+    try {
+      await FirebaseService.instance.forwardCaseToDoctor(
+        caseId,
+        notes: notes,
+        priority: priority,
+        ashaId: ashaId,
+        ashaName: ashaName,
+      );
+    } catch (e) {
+      debugPrint('LocalStore.forwardCaseToDoctor Firebase error: $e');
+    }
   }
 
   static Future<void> saveDoctorReviewForCase(
     String caseId, {
     required String doctorName,
+    String? doctorId,
     required String assessment,
     required String plan,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cases = await all();
+      final cases = await all(syncWithFirebase: false);
       final idx = cases.indexWhere((c) => c.id == caseId);
       if (idx != -1) {
         cases[idx] = cases[idx].copyWith(
@@ -1545,6 +1631,19 @@ class LocalStore {
         await prefs.setString(casesKey, jsonEncode(cases.map((e) => e.toJson()).toList()));
       }
     } catch (_) {}
+
+    // Synchronize review to Firebase
+    try {
+      await FirebaseService.instance.saveDoctorReview(
+        caseId: caseId,
+        doctorName: doctorName,
+        doctorId: doctorId,
+        assessment: assessment,
+        plan: plan,
+      );
+    } catch (e) {
+      debugPrint('LocalStore.saveDoctorReviewForCase Firebase error: $e');
+    }
   }
 
   static Future<void> clear() async {
@@ -1563,7 +1662,11 @@ class LocalStore {
     } catch (_) {}
   }
 
-  static Future<void> saveSignedNote(SignedConsultNote note) async {
+  static Future<void> saveSignedNote(
+    SignedConsultNote note, {
+    String? doctorName,
+    String? doctorId,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(notesKey);
@@ -1571,5 +1674,15 @@ class LocalStore {
       list.insert(0, note.toJson());
       await prefs.setString(notesKey, jsonEncode(list));
     } catch (_) {}
+
+    try {
+      await FirebaseService.instance.saveConsultNote(
+        note,
+        doctorName: doctorName,
+        doctorId: doctorId,
+      );
+    } catch (e) {
+      debugPrint('LocalStore.saveSignedNote Firebase error: $e');
+    }
   }
 }

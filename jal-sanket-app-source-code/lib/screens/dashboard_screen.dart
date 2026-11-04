@@ -50,6 +50,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   List<SavedCaseRow> _pendingDoctorCases = [];
   int _urgentDoctorCasesCount = 0;
+
+  // ── IoT Value Mismatch Alert State (Restricted strictly to Jalrakshak & Citizen) ──
+  IotMismatchAlert? _activeIotAlert;
+  Timer? _iotAlertCountdownTimer;
+  Timer? _iotPeriodicCheckTimer;
+  int _iotAlertSecondsLeft = 30;
+  String? _lastDismissedAlertId;
   double? _wxTemp;
   double? _wxRain;
   double? _wxWind;
@@ -101,6 +108,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
     _autoDetectLocationAndFetchData();
     Esp32NodeService.instance.startMonitoring();
+    if (widget.userRole == 'Jalrakshak' || widget.userRole == 'Citizen') {
+      _startIotMismatchMonitoring();
+    }
     _wxTimer = Timer.periodic(const Duration(seconds: 60), (_) => _fetchDashboardWeather(lat: _currentLat, lon: _currentLon));
   }
 
@@ -129,6 +139,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     AppTranslations.languageNotifier.removeListener(_onLanguageChanged);
     _wxTimer?.cancel();
     Esp32NodeService.instance.stopMonitoring();
+    _iotAlertCountdownTimer?.cancel();
+    _iotPeriodicCheckTimer?.cancel();
+    Esp32NodeService.instance.latestSensorData.removeListener(_onSensorDataChanged);
     super.dispose();
   }
 
@@ -474,8 +487,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadForwardedCases() async {
     try {
-      final list = await LocalStore.all();
-      final fwd = list.where((c) => c.isForwardedToDoctor).toList();
+      final list = await LocalStore.all(syncWithFirebase: true);
+      final fwd = list.where((c) => c.isForwardedToDoctor || c.doctorStatus == 'pending' || c.doctorStatus == 'reviewed').toList();
       if (mounted) {
         setState(() {
           _pendingDoctorCases = fwd.where((c) => c.doctorStatus == 'pending').toList();
@@ -486,7 +499,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       // Synchronize live cases from Firebase Realtime Database
       FirebaseService.instance.fetchVoiceCases().then((remoteCases) {
         if (remoteCases.isNotEmpty && mounted) {
-          final remoteFwd = remoteCases.where((c) => c.isForwardedToDoctor).toList();
+          final remoteFwd = remoteCases.where((c) => c.isForwardedToDoctor || c.doctorStatus == 'pending' || c.doctorStatus == 'reviewed').toList();
           if (remoteFwd.isNotEmpty) {
             setState(() {
               _pendingDoctorCases = remoteFwd.where((c) => c.doctorStatus == 'pending').toList();
@@ -769,6 +782,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Role-restricted 30-second IoT mismatch alert (Jalrakshak & Citizen ONLY)
+                        if ((widget.userRole == 'Jalrakshak' || widget.userRole == 'Citizen') && _activeIotAlert != null) ...[
+                          _buildIotMismatchAlertBanner(),
+                          const SizedBox(height: 14),
+                        ],
+
                         if (widget.userRole == 'Medical Officer' || _pendingDoctorCases.isNotEmpty) ...[
                           _buildDoctorForwardedBanner(),
                           const SizedBox(height: 14),
@@ -2176,6 +2195,460 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // IoT Mismatch Monitoring & 30-Second Auto-Dismiss Alert (Jalrakshak & Citizen ONLY)
+  // ─────────────────────────────────────────────────────────────────────────
+  void _startIotMismatchMonitoring() {
+    _checkIotMismatchFromDb();
+    Esp32NodeService.instance.latestSensorData.addListener(_onSensorDataChanged);
+    _iotPeriodicCheckTimer?.cancel();
+    _iotPeriodicCheckTimer = Timer.periodic(const Duration(seconds: 12), (_) {
+      if (mounted && (widget.userRole == 'Jalrakshak' || widget.userRole == 'Citizen')) {
+        _checkIotMismatchFromDb();
+      }
+    });
+  }
+
+  void _onSensorDataChanged() {
+    if (!mounted || _activeIotAlert != null) return;
+    if (widget.userRole != 'Jalrakshak' && widget.userRole != 'Citizen') return;
+
+    final data = Esp32NodeService.instance.latestSensorData.value;
+    final config = Esp32NodeService.instance.configNotifier.value;
+    if (data == null) return;
+
+    if (data.tds != null && data.tds! > config.tdsMax) {
+      _triggerIotAlert(
+        IotMismatchAlert(
+          id: 'live-tds-${DateTime.now().millisecondsSinceEpoch}',
+          title: _selectedLanguage == 'English'
+              ? '⚠️ High TDS Alert: Limit Exceeded!'
+              : (_selectedLanguage == 'हिंदी'
+                  ? '⚠️ उच्च टीडीएस अलर्ट: सीमा पार!'
+                  : '⚠️ उच्च TDS इशारा: सुरक्षित मर्यादा ओलांडली!'),
+          subtitle: _selectedLanguage == 'English'
+              ? 'TDS value is above the safe drinking limit (${config.tdsMax.toInt()} ppm).'
+              : (_selectedLanguage == 'हिंदी'
+                  ? 'टीडीएस सुरक्षित पेयजल सीमा (${config.tdsMax.toInt()} ppm) से अधिक है।'
+                  : 'पाण्यातील टीडीएस सुरक्षित पिण्याच्या मर्यादेपेक्षा (${config.tdsMax.toInt()} ppm) जास्त आहे.'),
+          parameter: 'TDS (क्षार)',
+          currentValue: data.tds!,
+          threshold: config.tdsMax,
+          unit: 'ppm',
+          source: 'SENSOR_DATA.TDS',
+          recommendation: widget.userRole == 'Jalrakshak'
+              ? 'जलसुरक्षकाने त्वरित पाण्याचे स्त्रोत शुद्धीकरण व क्लोरीनेशन सुरू करावे.'
+              : 'नागरिकांनी पाणी किमान २० मिनिटे उकळून प्यावे.',
+          detectedAt: DateTime.now(),
+        ),
+      );
+    } else if (data.turbidityNTU != null && data.turbidityNTU! > config.turbidityMax) {
+      _triggerIotAlert(
+        IotMismatchAlert(
+          id: 'live-turb-${DateTime.now().millisecondsSinceEpoch}',
+          title: _selectedLanguage == 'English'
+              ? '⚠️ High Turbidity Alert: Murky Water!'
+              : (_selectedLanguage == 'हिंदी'
+                  ? '⚠️ उच्च गंदलापन अलर्ट: पानी गंदा है!'
+                  : '⚠️ पाणी गढूळ आढळले: गढूळपणा मर्यादा ओलांडली!'),
+          subtitle: _selectedLanguage == 'English'
+              ? 'Turbidity is above the permissible limit (${config.turbidityMax.toInt()} NTU).'
+              : (_selectedLanguage == 'हिंदी'
+                  ? 'गंदलापन अनुज्ञेय सीमा (${config.turbidityMax.toInt()} NTU) से अधिक है।'
+                  : 'पाण्याचा गढूळपणा अनुज्ञेय मर्यादेपेक्षा (${config.turbidityMax.toInt()} NTU) जास्त आहे.'),
+          parameter: 'Turbidity (गढूळपणा)',
+          currentValue: data.turbidityNTU!,
+          threshold: config.turbidityMax,
+          unit: 'NTU',
+          source: 'SENSOR_DATA.Turbidity',
+          recommendation: widget.userRole == 'Jalrakshak'
+              ? 'जलसुरक्षकाने तुरटी फिरवून स्त्रोताचे शुद्धीकरण करावे.'
+              : 'नागरिकांनी पाणी गाळून व उकळून प्यावे.',
+          detectedAt: DateTime.now(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _checkIotMismatchFromDb() async {
+    if (!mounted || _activeIotAlert != null) return;
+    if (widget.userRole != 'Jalrakshak' && widget.userRole != 'Citizen') return;
+
+    try {
+      final alert = await FirebaseService.instance.checkIotMismatch();
+      if (alert != null && alert.id != _lastDismissedAlertId && mounted) {
+        _triggerIotAlert(alert);
+      }
+    } catch (_) {}
+  }
+
+  void _triggerIotAlert(IotMismatchAlert alert, {bool showNotification = true}) {
+    // STRICT ROLE RESTRICTION: ONLY Jalrakshak and Citizen (Villager)
+    if (widget.userRole != 'Jalrakshak' && widget.userRole != 'Citizen') {
+      return;
+    }
+
+    _iotAlertCountdownTimer?.cancel();
+    setState(() {
+      _activeIotAlert = alert;
+      _iotAlertSecondsLeft = 30;
+    });
+
+    if (showNotification && mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 8),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      alert.title,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                    ),
+                    Text(
+                      '${alert.parameter}: ${alert.currentValue.toStringAsFixed(1)} ${alert.unit} (मर्यादा: ${alert.threshold.toInt()} ${alert.unit})',
+                      style: const TextStyle(fontSize: 11, color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Active 30-second countdown timer. At 0 seconds, alert is wiped out automatically.
+    _iotAlertCountdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_iotAlertSecondsLeft > 1) {
+        setState(() {
+          _iotAlertSecondsLeft--;
+        });
+      } else {
+        timer.cancel();
+        setState(() {
+          _activeIotAlert = null; // Wiped out after exactly 30 sec!
+          _iotAlertSecondsLeft = 30;
+          _lastDismissedAlertId = alert.id;
+        });
+      }
+    });
+  }
+
+  void _dismissIotAlert() {
+    _iotAlertCountdownTimer?.cancel();
+    setState(() {
+      if (_activeIotAlert != null) {
+        _lastDismissedAlertId = _activeIotAlert!.id;
+      }
+      _activeIotAlert = null;
+      _iotAlertSecondsLeft = 30;
+    });
+  }
+
+  void _showCitizenWaterAlertSheet(IotMismatchAlert alert) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.health_and_safety_rounded, color: Color(0xFFDC2626), size: 28),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _selectedLanguage == 'English'
+                        ? 'Citizen Drinking Water Advisory'
+                        : (_selectedLanguage == 'हिंदी' ? 'नागरिक पेयजल सुरक्षा निर्देश' : 'नागरिकांसाठी सुरक्षित पाणी सूचना'),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F1E36)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              '⚠️ ${alert.title}',
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFDC2626), fontSize: 14),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${alert.parameter}: ${alert.currentValue.toStringAsFixed(1)} ${alert.unit} (सुरक्षित मर्यादा: ${alert.threshold.toInt()} ${alert.unit})',
+              style: const TextStyle(fontSize: 12, color: Color(0xFF475569)),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'तातडीने घ्यावयाची काळजी:\n'
+              '१. पिण्याचे पाणी किमान २० मिनिटे उकळून व गाळून प्या.\n'
+              '२. लहान मुले, वृद्ध व आजारी व्यक्तींना ओआरएस (ORS) पाणी द्या.\n'
+              '३. जलसुरक्षकाद्वारे शुद्धीकरण पूर्ण होईपर्यंत थेट नळाचे पाणी पिणे टाळा.',
+              style: TextStyle(fontSize: 13, height: 1.5, color: Color(0xFF1E293B)),
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F766E),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Text('समजले (Understood)'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIotMismatchAlertBanner() {
+    if (_activeIotAlert == null) return const SizedBox.shrink();
+    final alert = _activeIotAlert!;
+    final isJalrakshak = widget.userRole == 'Jalrakshak';
+
+    final countdownText = _selectedLanguage == 'English'
+        ? '⏱️ Auto-dismiss in ${_iotAlertSecondsLeft}s'
+        : (_selectedLanguage == 'हिंदी'
+            ? '⏱️ ${_iotAlertSecondsLeft}s में बंद होगा'
+            : '⏱️ ३० सेकंदात बंद होईल (${_iotAlertSecondsLeft}s)');
+
+    final roleActionText = isJalrakshak
+        ? (_selectedLanguage == 'English'
+            ? 'Start Dosing'
+            : (_selectedLanguage == 'हिंदी' ? 'डोजिंग शुरू करें' : 'क्लोरीनेशन / डोसिंग'))
+        : (_selectedLanguage == 'English'
+            ? 'Safety Guide'
+            : (_selectedLanguage == 'हिंदी' ? 'सुरक्षा निर्देश' : 'आरोग्य सूचना'));
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFDC2626), width: 1.8),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFDC2626).withValues(alpha: 0.18),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with red badge and active 30s countdown timer
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: const BoxDecoration(
+              color: Color(0xFFDC2626),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.crisis_alert_rounded, color: Colors.white, size: 22),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    alert.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13.5,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+                  ),
+                  child: Text(
+                    countdownText,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Body Details
+          Padding(
+            padding: const EdgeInsets.all(14.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  alert.subtitle,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: Color(0xFF991B1B),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Metrics Row
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFCA5A5)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'सेन्सर वाचन (${alert.parameter})',
+                              style: const TextStyle(fontSize: 10.5, color: Color(0xFF7F1D1D)),
+                            ),
+                            Text(
+                              '${alert.currentValue.toStringAsFixed(1)} ${alert.unit}',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFDC2626),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(width: 1, height: 32, color: const Color(0xFFFCA5A5)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'सुरक्षित मर्यादा (Limit)',
+                              style: TextStyle(fontSize: 10.5, color: Color(0xFF7F1D1D)),
+                            ),
+                            Text(
+                              '${alert.threshold.toInt()} ${alert.unit}',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF15803D),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // Source tag & Recommendation
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEE2E2),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'टॅग: ${alert.source}',
+                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF991B1B)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        alert.recommendation,
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF7F1D1D)),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Action Buttons Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          if (isJalrakshak) {
+                            setState(() => _currentNavIndex = 3);
+                          } else {
+                            _showCitizenWaterAlertSheet(alert);
+                          }
+                        },
+                        icon: Icon(isJalrakshak ? Icons.science_rounded : Icons.health_and_safety_rounded, size: 16),
+                        label: Text(roleActionText),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFDC2626),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton(
+                      onPressed: _dismissIotAlert,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF991B1B),
+                        side: const BorderSide(color: Color(0xFFFCA5A5)),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: Text(
+                        _selectedLanguage == 'English' ? 'Dismiss' : (_selectedLanguage == 'हिंदी' ? 'बंद करें' : 'बंद करा'),
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDoctorForwardedBanner() {
     final isDoc = widget.userRole == 'Medical Officer';
     return Container(
@@ -3363,7 +3836,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Card 3: IoT Telemetry Node (ONLINE, REAL-TIME)
   Widget _buildIoTTelemetryCard() {
     final espService = Esp32NodeService.instance;
-    return InkWell(
+    final cardWidget = InkWell(
       onTap: () {
         setState(() => _currentNavIndex = 3);
       },
@@ -3523,6 +3996,66 @@ class _DashboardScreenState extends State<DashboardScreen> {
         },
       ),
     );
+
+    // If logged in as Jalrakshak or Citizen, show quick test button for evaluation
+    if (widget.userRole == 'Jalrakshak' || widget.userRole == 'Citizen') {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          cardWidget,
+          const SizedBox(height: 6),
+          Align(
+            alignment: Alignment.centerRight,
+            child: InkWell(
+              onTap: () {
+                _triggerIotAlert(
+                  IotMismatchAlert(
+                    id: 'test-mismatch-${DateTime.now().millisecondsSinceEpoch}',
+                    title: '🚨 सेन्सर मर्यादा ओलांडली: उच्च TDS (640 ppm > 500 ppm)',
+                    subtitle: 'IoT सेन्सर टॅग (SENSOR_DATA) कडून प्राप्त रीडिंग सुरक्षित मर्यादेपेक्षा जास्त आहे.',
+                    parameter: 'TDS (विरघळलेले क्षार)',
+                    currentValue: 640.0,
+                    threshold: 500.0,
+                    unit: 'ppm',
+                    source: 'SENSOR_DATA (RTDB)',
+                    recommendation: widget.userRole == 'Jalrakshak'
+                        ? 'जलसुरक्षकाने लगेच पाणी पुरवठा तपासावा व क्लोरीनेशन प्रक्रिया सुरू करावी.'
+                        : 'नागरिकांनी पाणी किमान २० मिनिटे उकळून प्यावे.',
+                    detectedAt: DateTime.now(),
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.science_outlined, size: 14, color: Color(0xFFDC2626)),
+                    SizedBox(width: 4),
+                    Text(
+                      '🧪 IoT Mismatch चाचणी (Test 30s Alert)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFDC2626),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return cardWidget;
   }
 
   // --- SCIENTIFIC RISK & EPIDEMIOLOGICAL CALCULATIONS (FROM SCRAPED DATA) ---
