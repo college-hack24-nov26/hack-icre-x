@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math' as math;
@@ -60,6 +61,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _iotAlertSecondsLeft = 30;
   String? _lastDismissedAlertId;
   int _alertHistoryCount = 0;
+  Map<String, bool> _completedTaskIds = {};
+  List<Map<String, dynamic>> _customTasks = [];
+  String _taskFilter = 'all';
   double? _wxTemp;
   double? _wxRain;
   double? _wxWind;
@@ -102,7 +106,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    SystemNotificationService.requestNotificationPermission();
     _initAppLanguage();
+    _loadRoleTasks();
     _loadForwardedCases();
     _loadSelectedVillageFromPrefs().then((_) {
       _fetchDashboardWeather();
@@ -692,7 +698,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   userId: widget.userId,
                   showBottomNav: false,
                 ),
-                _buildPlaceholderView('Field Tasks', Icons.check_box_outlined),
+                _buildRoleTasksView(),
               ],
             ),
 
@@ -912,47 +918,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildPlaceholderView(String title, IconData icon) {
-    return SafeArea(
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFFE0F2FE),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 48, color: const Color(0xFF0284C7)),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0F1E36),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Telemetry and task module active',
-              style: TextStyle(
-                fontSize: 14,
-                color: Color(0xFF64748B),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // Top Header: Menu, Logo, Notifications, Language, Profile
   Widget _buildTopHeader() {
+    final bool hasActiveAlert = _activeIotAlert != null;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0),
       child: Row(
         children: [
           // Menu button
@@ -963,117 +933,125 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
           ),
 
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
 
-          // Big App Logo (without redundant app name text)
+          // App Logo (compact height 36 so it doesn't crowd header)
           Image.asset(
             'assets/images/app-logo.png',
-            height: 52,
+            height: 36,
             fit: BoxFit.contain,
           ),
 
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
 
-          // Role Badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
-            decoration: BoxDecoration(
-              color: widget.userRole == 'Medical Officer'
-                  ? const Color(0xFFECFDF5)
-                  : (widget.userRole == 'Jalrakshak'
-                      ? const Color(0xFFE0F2FE)
-                      : (widget.userRole == 'Citizen'
-                          ? const Color(0xFFFEF3C7)
-                          : const Color(0xFFEFF6FF))),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
+          // Role Badge (flexible & compact)
+          Flexible(
+            fit: FlexFit.loose,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3.5),
+              decoration: BoxDecoration(
                 color: widget.userRole == 'Medical Officer'
-                    ? const Color(0xFF10B981)
+                    ? const Color(0xFFECFDF5)
                     : (widget.userRole == 'Jalrakshak'
-                        ? const Color(0xFF0284C7)
+                        ? const Color(0xFFE0F2FE)
                         : (widget.userRole == 'Citizen'
-                            ? const Color(0xFFD97706)
-                            : const Color(0xFF3B82F6))),
-                width: 1.0,
+                            ? const Color(0xFFFEF3C7)
+                            : const Color(0xFFEFF6FF))),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: widget.userRole == 'Medical Officer'
+                      ? const Color(0xFF10B981)
+                      : (widget.userRole == 'Jalrakshak'
+                          ? const Color(0xFF0284C7)
+                          : (widget.userRole == 'Citizen'
+                              ? const Color(0xFFD97706)
+                              : const Color(0xFF3B82F6))),
+                  width: 1.0,
+                ),
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  widget.userRole == 'Medical Officer'
-                      ? '🩺'
-                      : (widget.userRole == 'ASHA Worker'
-                          ? '👩‍⚕️'
-                          : (widget.userRole == 'BDO'
-                              ? '🏛️'
-                              : (widget.userRole == 'THO'
-                                  ? '🏥'
-                                  : (widget.userRole == 'Jalrakshak'
-                                      ? '💧'
-                                      : '👤')))),
-                  style: const TextStyle(fontSize: 11),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  widget.userRole,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: widget.userRole == 'Medical Officer'
-                        ? const Color(0xFF065F46)
-                        : (widget.userRole == 'Jalrakshak'
-                            ? const Color(0xFF0369A1)
-                            : (widget.userRole == 'Citizen'
-                                ? const Color(0xFF92400E)
-                                : const Color(0xFF1E40AF))),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    widget.userRole == 'Medical Officer'
+                        ? '🩺'
+                        : (widget.userRole == 'ASHA Worker'
+                            ? '👩‍⚕️'
+                            : (widget.userRole == 'BDO'
+                                ? '🏛️'
+                                : (widget.userRole == 'THO'
+                                    ? '🏥'
+                                    : (widget.userRole == 'Jalrakshak'
+                                        ? '💧'
+                                        : '👤')))),
+                    style: const TextStyle(fontSize: 11),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      widget.userRole,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: widget.userRole == 'Medical Officer'
+                            ? const Color(0xFF065F46)
+                            : (widget.userRole == 'Jalrakshak'
+                                ? const Color(0xFF0369A1)
+                                : (widget.userRole == 'Citizen'
+                                    ? const Color(0xFF92400E)
+                                    : const Color(0xFF1E40AF))),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
 
           const Spacer(),
 
-          // Notification Bell with badge
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              _buildSquareIconButton(
-                icon: Icons.notifications_none_rounded,
-                iconColor: const Color(0xFF072146),
-                onTap: _showAlertHistorySheet,
-              ),
-              Positioned(
-                top: -3,
-                right: -3,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE11D48),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5),
-                  ),
-                  child: Text(
-                    '${_alertHistoryCount > 0 ? _alertHistoryCount : 1}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                      height: 1.0,
+          // ONLY show notification icon in header if a notification/alert appears!
+          if (hasActiveAlert) ...[
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                _buildSquareIconButton(
+                  icon: Icons.notifications_active_rounded,
+                  iconColor: const Color(0xFFE11D48),
+                  onTap: _showAlertHistorySheet,
+                ),
+                Positioned(
+                  top: -2,
+                  right: -2,
+                  child: Container(
+                    padding: const EdgeInsets.all(3.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE11D48),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: Text(
+                      '${_alertHistoryCount > 0 ? _alertHistoryCount : 1}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8.5,
+                        fontWeight: FontWeight.bold,
+                        height: 1.0,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-
-          const SizedBox(width: 8),
+              ],
+            ),
+            const SizedBox(width: 6),
+          ],
 
           // Themed Language Selector
           _buildLanguageSelector(),
 
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
 
           // Themed Profile Button
           _buildSquareIconButton(
@@ -1097,8 +1075,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
       child: Container(
-        width: 40,
-        height: 40,
+        width: 38,
+        height: 38,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(10),
@@ -1145,8 +1123,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _buildLanguageMenuItem('हिंदी', 'हिंदी (Hindi)'),
       ],
       child: Container(
-        height: 40,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(10),
@@ -5404,6 +5382,903 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 shape: BoxShape.circle,
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+
+  // ── ROLE-BASED FIELD TASKS & DUTIES IMPLEMENTATION ──
+  Future<void> _loadRoleTasks() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = 'role_tasks_state_${widget.userRole}_${widget.userId}';
+      final raw = prefs.getString(key);
+      if (raw != null && raw.isNotEmpty) {
+        final Map<String, dynamic> decoded = jsonDecode(raw);
+        if (mounted) {
+          setState(() {
+            _completedTaskIds = decoded.map((k, v) => MapEntry(k, v == true));
+          });
+        }
+      }
+      final customKey = 'role_custom_tasks_${widget.userRole}_${widget.userId}';
+      final customRaw = prefs.getString(customKey);
+      if (customRaw != null && customRaw.isNotEmpty) {
+        final List decodedCustom = jsonDecode(customRaw);
+        if (mounted) {
+          setState(() {
+            _customTasks = List<Map<String, dynamic>>.from(decodedCustom);
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveRoleTasks() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = 'role_tasks_state_${widget.userRole}_${widget.userId}';
+      await prefs.setString(key, jsonEncode(_completedTaskIds));
+      final customKey = 'role_custom_tasks_${widget.userRole}_${widget.userId}';
+      await prefs.setString(customKey, jsonEncode(_customTasks));
+    } catch (_) {}
+  }
+
+  void _toggleRoleTask(String taskId) {
+    setState(() {
+      _completedTaskIds[taskId] = !(_completedTaskIds[taskId] ?? false);
+    });
+    _saveRoleTasks();
+  }
+
+  void _resetRoleTasks() {
+    setState(() {
+      _completedTaskIds.clear();
+    });
+    _saveRoleTasks();
+  }
+
+  void _addCustomRoleTask(String title, String category) {
+    final newTask = {
+      'id': 'custom_${DateTime.now().millisecondsSinceEpoch}',
+      'title': title,
+      'category': category.isNotEmpty ? category : (_selectedLanguage == 'English' ? 'Custom' : 'वैयक्तिक'),
+      'priority': 'Normal',
+      'icon': Icons.task_alt,
+    };
+    setState(() {
+      _customTasks.add(newTask);
+    });
+    _saveRoleTasks();
+  }
+
+  List<Map<String, dynamic>> _getRoleTasksFor(String role, String lang) {
+    if (role == 'ASHA Worker') {
+      return [
+        {
+          'id': 'asha_1',
+          'title': lang == 'English'
+              ? 'Survey households for diarrhoea & vomiting symptoms'
+              : (lang == 'हिंदी'
+                  ? 'घरोघरी जाकर दस्त और उल्टी के मरीजों का सर्वेक्षण करें'
+                  : 'घरोघरी भेट देऊन अतिसार व उलट्या रुग्णांचे सर्वेक्षण करा'),
+          'category': lang == 'English' ? 'Health Survey' : (lang == 'हिंदी' ? 'स्वास्थ्य सर्वेक्षण' : 'आरोग्य सर्वेक्षण'),
+          'priority': 'High',
+          'icon': Icons.medical_services_outlined,
+        },
+        {
+          'id': 'asha_2',
+          'title': lang == 'English'
+              ? 'Inspect local wells & tap stands for sanitary cleanliness'
+              : (lang == 'हिंदी'
+                  ? 'स्थानीय कुओं और नलों के आसपास स्वच्छता की जांच करें'
+                  : 'स्थानिक विहिरी व नळ स्टँड परिसरातील स्वच्छतेची पाहणी करा'),
+          'category': lang == 'English' ? 'Water Safety' : (lang == 'हिंदी' ? 'जल सुरक्षा' : 'जल सुरक्षा'),
+          'priority': 'Normal',
+          'icon': Icons.water_drop_outlined,
+        },
+        {
+          'id': 'asha_3',
+          'title': lang == 'English'
+              ? 'Distribute ORS sachets and Zinc tablets to affected homes'
+              : (lang == 'हिंदी'
+                  ? 'प्रभावित परिवारों को ओआरएस और जिंक की गोलियां वितरित करें'
+                  : 'बाधित कुटुंबांना ओआरएस (ORS) व झिंक गोळ्या वाटप करा'),
+          'category': lang == 'English' ? 'Medicines' : (lang == 'हिंदी' ? 'दवा वितरण' : 'औषध वाटप'),
+          'priority': 'High',
+          'icon': Icons.medication_outlined,
+        },
+        {
+          'id': 'asha_4',
+          'title': lang == 'English'
+              ? 'Record new symptomatic cases in JalSanket Voice Engine'
+              : (lang == 'हिंदी'
+                  ? 'JalSanket वॉयस इंजन में नए मरीजों का विवरण दर्ज करें'
+                  : 'नवीन आढळलेल्या रुग्णांची माहिती JalSanket व्हॉइसने नोंदवा'),
+          'category': lang == 'English' ? 'Reporting' : (lang == 'हिंदी' ? 'रिपोर्टिंग' : 'केस नोंदणी'),
+          'priority': 'High',
+          'icon': Icons.mic_none_outlined,
+        },
+        {
+          'id': 'asha_5',
+          'title': lang == 'English'
+              ? 'Educate families on boiling drinking water for 20 minutes'
+              : (lang == 'हिंदी'
+                  ? 'नागरिकों को पीने का पानी 20 मिनट उबालने के लिए जागरूक करें'
+                  : 'पिण्याचे पाणी किमान २० मिनिटे उकळून पिण्याबाबत मार्गदर्शन करा'),
+          'category': lang == 'English' ? 'Awareness' : (lang == 'हिंदी' ? 'जनजागरूकता' : 'जनजागृती'),
+          'priority': 'Normal',
+          'icon': Icons.campaign_outlined,
+        },
+      ];
+    } else if (role == 'Medical Officer') {
+      return [
+        {
+          'id': 'mo_1',
+          'title': lang == 'English'
+              ? 'Review pending clinical cases forwarded by ASHA workers'
+              : (lang == 'हिंदी'
+                  ? 'आशा कार्यकर्ताओं द्वारा भेजी गई केस सूची की समीक्षा करें'
+                  : 'आशा सेविकांनी पाठवलेल्या प्रलंबित रुग्ण केसेसचा आढावा घ्या'),
+          'category': lang == 'English' ? 'Triage' : (lang == 'हिंदी' ? 'ट्रायज' : 'क्लिनिकल ट्रायज'),
+          'priority': 'High',
+          'icon': Icons.assignment_outlined,
+        },
+        {
+          'id': 'mo_2',
+          'title': lang == 'English'
+              ? 'Verify high-risk dehydration danger signs and start IV therapy'
+              : (lang == 'हिंदी'
+                  ? 'गंभीर निर्जलीकरण के लक्षण वाले मरीजों को तत्काल सलाइन शुरू करें'
+                  : 'अति डिहायड्रेशन असणाऱ्या रुग्णांवर त्वरित सलाईन व प्राथमिक उपचार करा'),
+          'category': lang == 'English' ? 'Emergency' : (lang == 'हिंदी' ? 'आपातकालीन' : 'तातडीचे उपचार'),
+          'priority': 'High',
+          'icon': Icons.emergency_outlined,
+        },
+        {
+          'id': 'mo_3',
+          'title': lang == 'English'
+              ? 'Cross-reference IoT sensor contamination data with patient clusters'
+              : (lang == 'हिंदी'
+                  ? 'मरीजों के क्षेत्र का IoT जल प्रदूषण डेटा से मिलान करें'
+                  : 'रुग्ण आढळलेल्या भागातील IoT पाणी गुणवत्ता व दूषितता तपासा'),
+          'category': lang == 'English' ? 'Epidemiology' : (lang == 'हिंदी' ? 'रोग विश्लेषण' : 'संसर्ग विश्लेषण'),
+          'priority': 'Normal',
+          'icon': Icons.analytics_outlined,
+        },
+        {
+          'id': 'mo_4',
+          'title': lang == 'English'
+              ? 'Audit PHC emergency drug inventory (ORS, Ringer Lactate, Cipro)'
+              : (lang == 'हिंदी'
+                  ? 'पीएचसी में आवश्यक दवाओं और ओआरएस के स्टॉक की जांच करें'
+                  : 'आरोग्य केंद्रातील ओआरएस, सलाईन व अँटिबायोटिक्स साठा तपासा'),
+          'category': lang == 'English' ? 'Inventory' : (lang == 'हिंदी' ? 'दवा स्टॉक' : 'साठा तपासणी'),
+          'priority': 'Normal',
+          'icon': Icons.inventory_2_outlined,
+        },
+        {
+          'id': 'mo_5',
+          'title': lang == 'English'
+              ? 'Send daily water-borne outbreak summary report to THO & BDO'
+              : (lang == 'हिंदी'
+                  ? 'तहसील स्वास्थ्य अधिकारी और बीडीओ को दैनिक प्रकोप रिपोर्ट भेजें'
+                  : 'तालुका आरोग्य अधिकारी (THO) व BDO यांना दैनिक साथ अहवाल पाठवा'),
+          'category': lang == 'English' ? 'Administration' : (lang == 'हिंदी' ? 'प्रशासन' : 'प्रशासन समन्वय'),
+          'priority': 'High',
+          'icon': Icons.send_outlined,
+        },
+      ];
+    } else if (role == 'Jalrakshak') {
+      return [
+        {
+          'id': 'jr_1',
+          'title': lang == 'English'
+              ? 'Test residual chlorine levels at village main ESR storage tank'
+              : (lang == 'हिंदी'
+                  ? 'गांव के मुख्य जल भंडार (ESR) पर अवशिष्ट क्लोरीन की जांच करें'
+                  : 'गावातील मुख्य जलकुंभ (ESR) येथे अवशिष्ट क्लोरीन मात्रा मोजा'),
+          'category': lang == 'English' ? 'Chlorination' : (lang == 'हिंदी' ? 'क्लोरीनीकरण' : 'क्लोरीनेशन'),
+          'priority': 'High',
+          'icon': Icons.science_outlined,
+        },
+        {
+          'id': 'jr_2',
+          'title': lang == 'English'
+              ? 'Check real-time JalSanket IoT Sensor Node (Turbidity, TDS, pH)'
+              : (lang == 'हिंदी'
+                  ? 'JalSanket IoT नोड पर टर्बिडिटी, टीडीएस और पीएच रीडिंग की जांच करें'
+                  : 'JalSanket IoT सेन्सॉर (टर्बिडिटी, TDS, pH) वाचनाची तपासणी करा'),
+          'category': lang == 'English' ? 'IoT Sensors' : (lang == 'हिंदी' ? 'IoT सेंसर' : 'IoT देखरेख'),
+          'priority': 'High',
+          'icon': Icons.sensors_outlined,
+        },
+        {
+          'id': 'jr_3',
+          'title': lang == 'English'
+              ? 'Inspect distribution pipeline valves for leaks or back-siphonage'
+              : (lang == 'हिंदी'
+                  ? 'वितरण पाइपलाइन वाल्व में रिसाव या संदूषण की जांच करें'
+                  : 'नळ वितरण पाईपलाईन, व्हॉल्व्ह आणि गळतीची पाहणी करा'),
+          'category': lang == 'English' ? 'Pipeline' : (lang == 'हिंदी' ? 'पाइपलाइन' : 'पाईपलाईन दुरुस्ती'),
+          'priority': 'Normal',
+          'icon': Icons.plumbing_outlined,
+        },
+        {
+          'id': 'jr_4',
+          'title': lang == 'English'
+              ? 'Apply recommended bleaching/TCL powder dose in public open well'
+              : (lang == 'हिंदी'
+                  ? 'सार्वजनिक कुओं में उचित मात्रा में टीसीएल ब्लीचिंग पाउडर डालें'
+                  : 'सार्वजनिक विहिरी व स्त्रोतांमध्ये टीसीएल पावडरचे निर्जंतुकीकरण करा'),
+          'category': lang == 'English' ? 'Disinfection' : (lang == 'हिंदी' ? 'कीटाणुशोधन' : 'जंतुनाशक प्रक्रिया'),
+          'priority': 'High',
+          'icon': Icons.cleaning_services_outlined,
+        },
+        {
+          'id': 'jr_5',
+          'title': lang == 'English'
+              ? 'Log daily water quality and chlorination test report on JalSanket'
+              : (lang == 'हिंदी'
+                  ? 'JalSanket पर दैनिक जल गुणवत्ता और क्लोरीन टेस्ट रिपोर्ट दर्ज करें'
+                  : 'JalSanket वर दैनंदिन पाणी गुणवत्ता व क्लोरीनेशन रिपोर्ट नोंदवा'),
+          'category': lang == 'English' ? 'Log Book' : (lang == 'हिंदी' ? 'लॉग बुक' : 'दैनिक नोंद'),
+          'priority': 'Normal',
+          'icon': Icons.edit_note_outlined,
+        },
+      ];
+    } else if (role == 'Citizen') {
+      return [
+        {
+          'id': 'cit_1',
+          'title': lang == 'English'
+              ? 'Boil drinking water for at least 20 minutes before consumption'
+              : (lang == 'हिंदी'
+                  ? 'पीने का पानी उपयोग से पहले कम से कम 20 मिनट तक उबालें'
+                  : 'पिण्याचे पाणी वापरण्यापूर्वी किमान २० मिनिटे उकळून थंड करा'),
+          'category': lang == 'English' ? 'Boiling' : (lang == 'हिंदी' ? 'पानी उबालना' : 'पाणी उकळणे'),
+          'priority': 'High',
+          'icon': Icons.local_fire_department_outlined,
+        },
+        {
+          'id': 'cit_2',
+          'title': lang == 'English'
+              ? 'Wash hands thoroughly with soap before food & after toilet'
+              : (lang == 'हिंदी'
+                  ? 'भोजन से पहले और शौच के बाद साबुन से हाथ अच्छी तरह धोएं'
+                  : 'जेवणापूर्वी व शौचाहून आल्यावर हात साबणाने स्वच्छ धुवा'),
+          'category': lang == 'English' ? 'Hygiene' : (lang == 'हिंदी' ? 'स्वच्छता' : 'व्यक्तिगत स्वच्छता'),
+          'priority': 'Normal',
+          'icon': Icons.wash_outlined,
+        },
+        {
+          'id': 'cit_3',
+          'title': lang == 'English'
+              ? 'Keep all household water pots covered with clean lids'
+              : (lang == 'हिंदी'
+                  ? 'घर के सभी पीने के पानी के बर्तनों को ढक्कन से ढक कर रखें'
+                  : 'घरातील पिण्याच्या पाण्याची सर्व भांडी स्वच्छ झाकणाने झाकून ठेवा'),
+          'category': lang == 'English' ? 'Storage' : (lang == 'हिंदी' ? 'सुरक्षित भंडारण' : 'सुरक्षित साठवण'),
+          'priority': 'Normal',
+          'icon': Icons.kitchen_outlined,
+        },
+        {
+          'id': 'cit_4',
+          'title': lang == 'English'
+              ? 'Immediately report cloudy, foul-smelling, or rusty tap water'
+              : (lang == 'हिंदी'
+                  ? 'नलों में गंदे या बदबूदार पानी की तुरंत ग्राम पंचायत में शिकायत करें'
+                  : 'नळाला गढूळ किंवा दुर्गंधीयुक्त पाणी आल्यास तात्काळ ग्रामपंचायतीला कळवा'),
+          'category': lang == 'English' ? 'Grievance' : (lang == 'हिंदी' ? 'शिकायत' : 'तक्रार नोंद'),
+          'priority': 'High',
+          'icon': Icons.report_problem_outlined,
+        },
+        {
+          'id': 'cit_5',
+          'title': lang == 'English'
+              ? 'Prepare & give fresh ORS solution if family member has loose motions'
+              : (lang == 'हिंदी'
+                  ? 'परिवार में किसी को दस्त होने पर तुरंत ओआरएस का घोल पिलाएं'
+                  : 'कुटुंबात जुलाब किंवा उलट्या झाल्यास लगेच ओआरएस (ORS) पाणी पाजा'),
+          'category': lang == 'English' ? 'Home Care' : (lang == 'हिंदी' ? 'प्राथमिक उपचार' : 'घरगुती काळजी'),
+          'priority': 'High',
+          'icon': Icons.local_drink_outlined,
+        },
+      ];
+    } else if (role == 'BDO') {
+      return [
+        {
+          'id': 'bdo_1',
+          'title': lang == 'English'
+              ? 'Review Har Ghar Jal tap connectivity progress across all 12 GPs'
+              : (lang == 'हिंदी'
+                  ? 'तालुका के सभी 12 ग्राम पंचायतों में हर घर जल कार्य की समीक्षा करें'
+                  : 'तालुक्यातील १२ ग्रामपंचायतींमधील हर घर जल नळजोडणी प्रगती तपासा'),
+          'category': lang == 'English' ? 'JJM Progress' : (lang == 'हिंदी' ? 'जेजेएम समीक्षा' : 'JJM प्रगती'),
+          'priority': 'High',
+          'icon': Icons.account_balance_outlined,
+        },
+        {
+          'id': 'bdo_2',
+          'title': lang == 'English'
+              ? 'Sanction emergency pipeline repair funds for high-leakage villages'
+              : (lang == 'हिंदी'
+                  ? 'लीकेज वाले गांवों के लिए आपातकालीन पाइपलाइन मरम्मत फंड जारी करें'
+                  : 'गळती असलेल्या गावांकरिता पाईपलाईन दुरुस्ती आपत्कालीन निधी मंजूर करा'),
+          'category': lang == 'English' ? 'Finance' : (lang == 'हिंदी' ? 'निधि आवंटन' : 'निधी वाटप'),
+          'priority': 'High',
+          'icon': Icons.payments_outlined,
+        },
+        {
+          'id': 'bdo_3',
+          'title': lang == 'English'
+              ? 'Arrange clean emergency water tankers for red-flagged habitations'
+              : (lang == 'हिंदी'
+                  ? 'जल प्रदूषण से प्रभावित बस्तियों में आपातकालीन पानी के टैंकर भेजें'
+                  : 'असुरक्षित पाणी स्त्रोत आढळलेल्या वाड्यांमध्ये तात्काळ टँकरची सोय करा'),
+          'category': lang == 'English' ? 'Relief' : (lang == 'हिंदी' ? 'आपातकालीन राहत' : 'आपत्कालीन पुरवठा'),
+          'priority': 'High',
+          'icon': Icons.local_shipping_outlined,
+        },
+        {
+          'id': 'bdo_4',
+          'title': lang == 'English'
+              ? 'Hold weekly coordination meet with Gram Sevaks & Jalrakshaks'
+              : (lang == 'हिंदी'
+                  ? 'ग्राम सेवकों और जलरक्षकों के साथ साप्ताहिक समीक्षा बैठक करें'
+                  : 'ग्रामसेवक व जलसुरक्षकांसोबत साप्ताहिक जल सुरक्षा समन्वय बैठक घ्या'),
+          'category': lang == 'English' ? 'Governance' : (lang == 'हिंदी' ? 'प्रशासन' : 'प्रशासकीय बैठक'),
+          'priority': 'Normal',
+          'icon': Icons.groups_outlined,
+        },
+        {
+          'id': 'bdo_5',
+          'title': lang == 'English'
+              ? 'Verify chlorination and IoT sensor uptime records with THO'
+              : (lang == 'हिंदी'
+                  ? 'टीएचओ के साथ क्लोरीनेशन और IoT सेंसर की स्थिति का सत्यापन करें'
+                  : 'तालुका आरोग्य अधिकाऱ्यांसोबत क्लोरीनेशन व IoT सेन्सॉर स्थिती पडताळा'),
+          'category': lang == 'English' ? 'Monitoring' : (lang == 'हिंदी' ? 'निगरानी' : 'गुणवत्ता तपासणी'),
+          'priority': 'Normal',
+          'icon': Icons.fact_check_outlined,
+        },
+      ];
+    } else {
+      // THO (Taluka Health Officer)
+      return [
+        {
+          'id': 'tho_1',
+          'title': lang == 'English'
+              ? 'Consolidate daily diarrheal and vomiting surveillance data from PHCs'
+              : (lang == 'हिंदी'
+                  ? 'सभी पीएचसी से दैनिक जलजन्य रोग और दस्त के आंकड़े संकलित करें'
+                  : 'सर्व प्राथमिक आरोग्य केंद्रांकडून अतिसार व जलजन्य आजारांचा अहवाल गोळा करा'),
+          'category': lang == 'English' ? 'Surveillance' : (lang == 'हिंदी' ? 'रोग निगरानी' : 'रोग सर्वेक्षण'),
+          'priority': 'High',
+          'icon': Icons.biotech_outlined,
+        },
+        {
+          'id': 'tho_2',
+          'title': lang == 'English'
+              ? 'Deploy Rapid Response Team (RRT) to cluster outbreak villages'
+              : (lang == 'हिंदी'
+                  ? 'प्रकोप वाले गांवों में त्वरित प्रतिक्रिया दल (RRT) तैनात करें'
+                  : 'रोगराईचा उद्रेक झालेल्या गावात जलद प्रतिसाद पथक (RRT) रवाना करा'),
+          'category': lang == 'English' ? 'RRT Response' : (lang == 'हिंदी' ? 'त्वरित दल' : 'आपत्कालीन पथक'),
+          'priority': 'High',
+          'icon': Icons.speed_outlined,
+        },
+        {
+          'id': 'tho_3',
+          'title': lang == 'English'
+              ? 'Send suspicious water samples to Public Health Laboratory (PHL)'
+              : (lang == 'हिंदी'
+                  ? 'संदिग्ध जल स्रोतों के नमूने सार्वजनिक स्वास्थ्य प्रयोगशाला (PHL) भेजें'
+                  : 'संशयित जल स्त्रोतांचे नमुने जिल्हा सार्वजनिक आरोग्य प्रयोगशाळेत (PHL) पाठवा'),
+          'category': lang == 'English' ? 'Lab Testing' : (lang == 'हिंदी' ? 'प्रयोगशाला' : 'नमुना चाचणी'),
+          'priority': 'High',
+          'icon': Icons.science_outlined,
+        },
+        {
+          'id': 'tho_4',
+          'title': lang == 'English'
+              ? 'Ensure adequate stock of IV fluids, ORS, and halazone tablets'
+              : (lang == 'हिंदी'
+                  ? 'उपकेंद्रों में आईवी तरल पदार्थ, ओआरएस और क्लोरीन गोलियों की उपलब्धता सुनिश्चित करें'
+                  : 'आरोग्य उपकेंद्रांमध्ये सलाईन, ओआरएस व क्लोरिन गोळ्यांचा पुरेसा साठा ठेवा'),
+          'category': lang == 'English' ? 'Logistics' : (lang == 'हिंदी' ? 'दवा आपूर्ति' : 'औषध साठा'),
+          'priority': 'Normal',
+          'icon': Icons.medication_liquid_outlined,
+        },
+        {
+          'id': 'tho_5',
+          'title': lang == 'English'
+              ? 'Submit daily water contamination flash bulletin to District Health Officer'
+              : (lang == 'हिंदी'
+                  ? 'जिला स्वास्थ्य अधिकारी (DHO) को दैनिक जल संक्रमण बुलेटिन भेजें'
+                  : 'जिल्हा आरोग्य अधिकारी (DHO) व जिल्हाधिकाऱ्यांना दैनिक जलसुरक्षा बुलेटिन पाठवा'),
+          'category': lang == 'English' ? 'Daily Bulletin' : (lang == 'हिंदी' ? 'दैनिक बुलेटिन' : 'दैनिक बुलेटिन'),
+          'priority': 'High',
+          'icon': Icons.summarize_outlined,
+        },
+      ];
+    }
+  }
+
+  Widget _buildRoleTasksView() {
+    final tasks = _getRoleTasksFor(widget.userRole, _selectedLanguage);
+    final allTasks = [...tasks, ..._customTasks];
+
+    final filteredTasks = allTasks.where((t) {
+      final isDone = _completedTaskIds[t['id']] == true;
+      if (_taskFilter == 'pending') return !isDone;
+      if (_taskFilter == 'completed') return isDone;
+      return true;
+    }).toList();
+
+    final totalCount = allTasks.length;
+    final doneCount = allTasks.where((t) => _completedTaskIds[t['id']] == true).length;
+    final double progress = totalCount > 0 ? (doneCount / totalCount) : 0.0;
+
+    String roleEmoji = widget.userRole == 'Medical Officer'
+        ? '🩺'
+        : (widget.userRole == 'ASHA Worker'
+            ? '👩‍⚕️'
+            : (widget.userRole == 'BDO'
+                ? '🏛️'
+                : (widget.userRole == 'THO'
+                    ? '🏥'
+                    : (widget.userRole == 'Jalrakshak' ? '💧' : '👤'))));
+
+    return Container(
+      color: const Color(0xFFF8FAFC),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            const SizedBox(height: 8),
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14.0),
+              child: Row(
+                children: [
+                  _buildSquareIconButton(
+                    icon: Icons.menu_rounded,
+                    onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    _selectedLanguage == 'English'
+                        ? 'Field Duties & Tasks'
+                        : (_selectedLanguage == 'हिंदी' ? 'दैनिक क्षेत्रीय कार्य' : 'क्षेत्रीय कार्ये व कर्तव्ये'),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF072146),
+                    ),
+                  ),
+                  const Spacer(),
+                  _buildLanguageSelector(),
+                  const SizedBox(width: 6),
+                  _buildSquareIconButton(
+                    icon: Icons.refresh_rounded,
+                    iconColor: const Color(0xFF0288D1),
+                    onTap: () {
+                      _showResetTasksConfirmation();
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Scrollable Task List
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 120),
+                children: [
+                  // Role Duty Card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF072146), Color(0xFF0B3B70)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF072146).withValues(alpha: 0.18),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(roleEmoji, style: const TextStyle(fontSize: 24)),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${widget.userRole} • ${widget.userName}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '📍 $_currentVillageName ($_currentBlockName)',
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(alpha: 0.8),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: progress >= 1.0 ? const Color(0xFF10B981) : const Color(0xFF0284C7),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                progress >= 1.0
+                                    ? (_selectedLanguage == 'English' ? 'Done 🎉' : 'पूर्ण 🎉')
+                                    : '${(progress * 100).toInt()}%',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _selectedLanguage == 'English'
+                                  ? "Today's Progress ($doneCount / $totalCount)"
+                                  : (_selectedLanguage == 'हिंदी'
+                                      ? "आज की प्रगति ($doneCount / $totalCount)"
+                                      : "आजची प्रगती ($doneCount / $totalCount पूर्ण)"),
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              doneCount == totalCount && totalCount > 0
+                                  ? (_selectedLanguage == 'English' ? 'All Tasks Done!' : 'सर्व कार्ये पूर्ण!')
+                                  : (_selectedLanguage == 'English' ? 'In Progress' : 'प्रगतीपथावर'),
+                              style: TextStyle(
+                                color: doneCount == totalCount ? const Color(0xFF34D399) : const Color(0xFF38BDF8),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 7,
+                            backgroundColor: Colors.white.withValues(alpha: 0.2),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              progress >= 1.0 ? const Color(0xFF10B981) : const Color(0xFF38BDF8),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Filter Chips & Add Task Button
+                  Row(
+                    children: [
+                      _buildTaskFilterChip('all', _selectedLanguage == 'English' ? 'All ($totalCount)' : 'सर्व ($totalCount)'),
+                      const SizedBox(width: 8),
+                      _buildTaskFilterChip('pending', _selectedLanguage == 'English' ? 'Pending (${totalCount - doneCount})' : 'प्रलंबित (${totalCount - doneCount})'),
+                      const SizedBox(width: 8),
+                      _buildTaskFilterChip('completed', _selectedLanguage == 'English' ? 'Completed ($doneCount)' : 'पूर्ण ($doneCount)'),
+                      const Spacer(),
+                      IconButton(
+                        tooltip: _selectedLanguage == 'English' ? 'Add Task' : 'नवीन कार्य जोडा',
+                        icon: const Icon(Icons.add_circle, color: Color(0xFF0284C7), size: 28),
+                        onPressed: _showAddCustomTaskDialog,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // Task Cards
+                  if (filteredTasks.isEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      alignment: Alignment.center,
+                      child: Column(
+                        children: [
+                          const Icon(Icons.task_alt, size: 52, color: Color(0xFF94A3B8)),
+                          const SizedBox(height: 10),
+                          Text(
+                            _selectedLanguage == 'English'
+                                ? 'No tasks in this view'
+                                : (_selectedLanguage == 'हिंदी' ? 'इस श्रेणी में कोई कार्य नहीं है' : 'या श्रेणीत कोणतीही कार्ये नाहीत'),
+                            style: const TextStyle(color: Color(0xFF64748B), fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    ...filteredTasks.map((t) => _buildSingleTaskCard(t)),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSingleTaskCard(Map<String, dynamic> t) {
+    final String id = t['id'];
+    final bool isDone = _completedTaskIds[id] == true;
+    final String title = t['title'] ?? '';
+    final String category = t['category'] ?? '';
+    final String priority = t['priority'] ?? 'Normal';
+    final IconData icon = t['icon'] is IconData
+        ? t['icon'] as IconData
+        : Icons.task_alt;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: isDone ? const Color(0xFFF1F5F9) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDone ? const Color(0xFFE2E8F0) : const Color(0xFFCBD5E1),
+          width: 1.0,
+        ),
+        boxShadow: isDone
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+      ),
+      child: InkWell(
+        onTap: () => _toggleRoleTask(id),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Checkbox icon
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: isDone ? const Color(0xFF10B981) : Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: isDone ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+                      width: 1.8,
+                    ),
+                  ),
+                  child: isDone
+                      ? const Icon(Icons.check, size: 16, color: Colors.white)
+                      : null,
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              // Title and category
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: isDone ? const Color(0xFF94A3B8) : const Color(0xFF0F172A),
+                        decoration: isDone ? TextDecoration.lineThrough : null,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: const Color(0xFF86EFAC), width: 0.8),
+                          ),
+                          child: Text(
+                            category,
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              color: Color(0xFF15803D),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: priority == 'High' ? const Color(0xFFFFF1F2) : const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: priority == 'High' ? const Color(0xFFFDA4AF) : const Color(0xFF93C5FD),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Text(
+                            priority == 'High'
+                                ? (_selectedLanguage == 'English' ? 'High' : 'तातडीचे')
+                                : (_selectedLanguage == 'English' ? 'Routine' : 'नियमित'),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: priority == 'High' ? const Color(0xFFBE123C) : const Color(0xFF1D4ED8),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              // Trailing icon
+              Icon(
+                icon,
+                size: 20,
+                color: isDone ? const Color(0xFFCBD5E1) : const Color(0xFF0284C7),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTaskFilterChip(String filterKey, String label) {
+    final bool isSelected = _taskFilter == filterKey;
+    return InkWell(
+      onTap: () => setState(() => _taskFilter = filterKey),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF072146) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF072146) : const Color(0xFFCBD5E1),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Colors.white : const Color(0xFF475569),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showResetTasksConfirmation() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(_selectedLanguage == 'English' ? 'Reset Daily Tasks?' : 'दैनंदिन कार्ये रीसेट करायची का?'),
+        content: Text(_selectedLanguage == 'English'
+            ? 'This will uncheck all completed tasks for a new day.'
+            : 'हे सर्व पूर्ण झालेली कार्ये नवीन दिवसासाठी पुन्हा रिकामी करेल.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(_selectedLanguage == 'English' ? 'Cancel' : 'रद्द करा'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF072146)),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _resetRoleTasks();
+            },
+            child: Text(_selectedLanguage == 'English' ? 'Reset' : 'रीसेट करा', style: const TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddCustomTaskDialog() {
+    final textCtrl = TextEditingController();
+    final catCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(_selectedLanguage == 'English' ? 'Add Custom Task' : 'नवीन कार्य जोडा'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: textCtrl,
+              decoration: InputDecoration(
+                labelText: _selectedLanguage == 'English' ? 'Task Description' : 'कार्याचे नाव / वर्णन',
+                hintText: _selectedLanguage == 'English' ? 'e.g. Inspect Well #2' : 'उदा. विहीर #२ क्लोरीनेशन तपासणी',
+              ),
+              autofocus: true,
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: catCtrl,
+              decoration: InputDecoration(
+                labelText: _selectedLanguage == 'English' ? 'Category' : 'श्रेणी (पर्यायी)',
+                hintText: _selectedLanguage == 'English' ? 'e.g. Inspection' : 'उदा. तपासणी',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(_selectedLanguage == 'English' ? 'Cancel' : 'रद्द करा'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7)),
+            onPressed: () {
+              final text = textCtrl.text.trim();
+              if (text.isNotEmpty) {
+                _addCustomRoleTask(text, catCtrl.text.trim());
+                Navigator.of(ctx).pop();
+              }
+            },
+            child: Text(_selectedLanguage == 'English' ? 'Add' : 'जोडा', style: const TextStyle(color: Colors.white)),
+          ),
         ],
       ),
     );

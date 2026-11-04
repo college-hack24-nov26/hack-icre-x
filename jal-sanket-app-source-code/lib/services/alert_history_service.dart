@@ -126,3 +126,4 @@ class AlertHistoryService {
     } catch (_) {}
   }
 }
+

@@ -1292,119 +1292,17 @@ class LocalStore {
   static const String seededKey = 'jalsanket_seeded_v1';
   static const String notesKey = 'jalsanket_consult_notes_v1';
 
-  static final List<SavedCaseRow> _initialDemoCases = [
-    SavedCaseRow(
-      id: 'case-seed-1',
-      savedAt: DateTime.now().subtract(const Duration(minutes: 42)).toIso8601String(),
-      villageId: 'v-shirol',
-      village: 'शिरोळ (Shirol)',
-      patientPseudoId: 'P-SHL-041',
-      patientName: 'सुनीता (Sunita)',
-      transcript:
-          'रुग्णाचे नाव सुनीता, वय पाच, शिरोळ गाव. तिला दोन दिवसांपासून जुलाब आहे, शौचात रक्त आहे, डोळे खोल गेले आहेत, पाणी पिऊ शकत नाही.',
-      symptoms: ['diarrhoea', 'blood_in_stool', 'sunken_eyes'],
-      ageYears: 5,
-      ageBand: '5-14',
-      gender: 'female',
-      durationDays: 2,
-      fever: false,
-      stoolsPerDay: 7,
-      vomitCount: 2,
-      bloodInStool: true,
-      ableToDrink: false,
-      verySleepy: true,
-      urinePassed: false,
-      othersSickAtHome: true,
-      orsGiven: true,
-      pregnancy: false,
-      infant: false,
-      waterSourceText: 'विहीर (Open Well #3)',
-      dangerSigns: ['sunken_eyes', 'unable_to_drink', 'very_sleepy', 'blood_in_stool'],
-      severityFlag: true,
-      waterRiskPercent: 90,
-      isWaterBorne: true,
-      waterRiskReason:
-          'सध्याची लक्षणे (जुलाब, शौचात रक्त, घरात इतरही आजारी, असुरक्षित पाण्याचा स्रोत) दूषित पाण्यामुळे उद्भवणाऱ्या जलजन्य आजाराशी सुसंगत आहेत.',
-      healthTips: [
-        'पिण्याचे पाणी किमान २० मिनिटे उकळून किंवा मेडिक्लोर / क्लोरिन गोळ्या टाकूनच प्या.',
-        'डिहायड्रेशन रोखण्यासाठी रुग्णाला वारंवार ओआरएस (ORS) पाणी, ताक किंवा लिंबू पाणी द्या.',
-        'धोक्याची चिन्हे आढळल्यास त्वरित जवळच्या प्राथमिक आरोग्य केंद्रात (PHC) दाखवा.',
-      ],
-      edits: {'stoolsPerDay': 7},
-      inputMode: 'audio',
-      provenance: 'live',
-      durationSec: 18,
-      isForwardedToDoctor: true,
-      forwardedAt: DateTime.now().subtract(const Duration(minutes: 42)).toIso8601String(),
-      doctorNotes: 'धोक्याची चिन्हे आढळली (तातडीने सलाईन व ओआरएस आवश्यक)',
-      priority: 'urgent',
-      doctorStatus: 'pending',
-    ),
-    SavedCaseRow(
-      id: 'case-seed-2',
-      savedAt: DateTime.now().subtract(const Duration(hours: 3, minutes: 15)).toIso8601String(),
-      villageId: 'v-pimpri',
-      village: 'पिंपरी (Pimpri)',
-      patientPseudoId: 'P-PMP-019',
-      patientName: 'राकेश (Rakesh)',
-      transcript:
-          'रुग्णाचे नाव राकेश, वय बत्तीस, पिंपरी गाव. त्याला तीन दिवसांपासून जुलाब आणि उलट्या होत आहेत, ताप नाही.',
-      symptoms: ['diarrhoea', 'vomiting'],
-      ageYears: 32,
-      ageBand: '15-59',
-      gender: 'male',
-      durationDays: 3,
-      fever: false,
-      stoolsPerDay: 4,
-      vomitCount: 2,
-      bloodInStool: false,
-      ableToDrink: true,
-      verySleepy: false,
-      urinePassed: true,
-      othersSickAtHome: false,
-      orsGiven: true,
-      pregnancy: false,
-      infant: false,
-      waterSourceText: 'ग्रामपंचायत नळ (Tap Water)',
-      dangerSigns: [],
-      severityFlag: false,
-      waterRiskPercent: 50,
-      isWaterBorne: true,
-      waterRiskReason:
-          'सध्याची लक्षणे (जुलाब, उलट्या) दूषित पाणी किंवा अस्वच्छतेमुळे उद्भवणाऱ्या जलजन्य आजाराशी (Water-borne Illness) सुसंगत आहेत.',
-      healthTips: [
-        'पिण्याचे पाणी किमान २० मिनिटे उकळून किंवा मेडिक्लोर / क्लोरिन गोळ्या टाकूनच प्या.',
-        'डिहायड्रेशन रोखण्यासाठी रुग्णाला वारंवार ओआरएस (ORS) पाणी, ताक किंवा लिंबू पाणी द्या.',
-        'जेवणापूर्वी व शौचाहून आल्यावर हात साबणाने स्वच्छ धुवा.',
-      ],
-      edits: {},
-      inputMode: 'typed',
-      provenance: 'live',
-      durationSec: 0,
-      isForwardedToDoctor: true,
-      forwardedAt: DateTime.now().subtract(const Duration(hours: 3)).toIso8601String(),
-      doctorNotes: 'आशा सेविकेने प्राथमिक तपासणी करून पाठवले',
-      priority: 'normal',
-      doctorStatus: 'pending',
-    ),
-  ];
+  static final List<SavedCaseRow> _initialDemoCases = [];
 
-  static List<SavedCaseRow> get initialDemoCases => List.unmodifiable(_initialDemoCases);
+  static List<SavedCaseRow> get initialDemoCases => const [];
 
   static Future<void> ensureSeeded() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final seeded = prefs.getBool(seededKey) ?? false;
       if (!seeded) {
-        final listJson = jsonEncode(_initialDemoCases.map((e) => e.toJson()).toList());
-        await prefs.setString(casesKey, listJson);
-        await prefs.setString(
-          identKey,
-          jsonEncode({
-            'P-SHL-041': 'सुनीता (Sunita)',
-            'P-PMP-019': 'राकेश (Rakesh)',
-          }),
-        );
+        await prefs.setString(casesKey, jsonEncode([]));
+        await prefs.setString(identKey, jsonEncode({}));
         await prefs.setBool(seededKey, true);
       }
     } catch (_) {}
@@ -1430,7 +1328,7 @@ class LocalStore {
             return row.copyWith(patientName: resolvedName);
           }
           return row;
-        }).toList();
+        }).where((c) => !c.id.startsWith("case-seed-") && !c.id.contains("seed")).toList();
       } else {
         final seeded = prefs.getBool(seededKey) ?? false;
         localCases = seeded ? [] : List.from(_initialDemoCases);
@@ -1441,7 +1339,8 @@ class LocalStore {
 
     if (syncWithFirebase) {
       try {
-        final remoteCases = await FirebaseService.instance.fetchVoiceCases();
+        final rawRemoteCases = await FirebaseService.instance.fetchVoiceCases();
+        final remoteCases = rawRemoteCases.where((c) => !c.id.startsWith("case-seed-") && !c.id.contains("seed")).toList();
         if (remoteCases.isNotEmpty) {
           final Map<String, SavedCaseRow> merged = {};
           // Start with local cases
@@ -1686,12 +1585,9 @@ class LocalStore {
   static Future<void> restoreDemoCases() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(seededKey);
-      await ensureSeeded();
-      final demoCases = List<SavedCaseRow>.from(_initialDemoCases);
-      for (final c in demoCases) {
-        await FirebaseService.instance.saveVoiceCase(c, ashaId: 'ASHA-402', ashaName: 'Sunita Kamble');
-      }
+      await prefs.setString(casesKey, jsonEncode([]));
+      await prefs.setString(identKey, jsonEncode({}));
+      await prefs.setBool(seededKey, true);
     } catch (_) {}
   }
 

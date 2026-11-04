@@ -83,10 +83,24 @@ void main() {
     });
 
     test('LocalStore.deleteCase removes individual case cleanly', () async {
+      final extraction = VoiceExtraction(
+        transcript: 'रुग्ण प्रकाश शिंदे, वय ३५, शिरोळ.',
+        patientName: VField<String>(value: 'प्रकाश शिंदे', status: 'ok'),
+        ageYears: VField<int>(value: 35, status: 'ok'),
+        village: VField<String>(value: 'शिरोळ (Shirol)', status: 'ok'),
+      );
+      final row = await LocalStore.saveFromExtraction(
+        extraction,
+        villageId: 'v-shirol',
+        patientPseudoId: 'P-SHL-123',
+        danger: [],
+        durationSec: 5,
+      );
+
       final casesBefore = await LocalStore.all(syncWithFirebase: false);
       expect(casesBefore.isNotEmpty, isTrue);
 
-      final toDeleteId = casesBefore.first.id;
+      final toDeleteId = row.id;
       await LocalStore.deleteCase(toDeleteId, deleteFromFirebase: false);
 
       final casesAfter = await LocalStore.all(syncWithFirebase: false);
@@ -94,6 +108,20 @@ void main() {
     });
 
     test('LocalStore.clear wipes all cases completely', () async {
+      final extraction = VoiceExtraction(
+        transcript: 'रुग्ण सुरेश, वय २५, शिरोळ.',
+        patientName: VField<String>(value: 'सुरेश', status: 'ok'),
+        ageYears: VField<int>(value: 25, status: 'ok'),
+        village: VField<String>(value: 'शिरोळ (Shirol)', status: 'ok'),
+      );
+      await LocalStore.saveFromExtraction(
+        extraction,
+        villageId: 'v-shirol',
+        patientPseudoId: 'P-SHL-456',
+        danger: [],
+        durationSec: 5,
+      );
+
       await LocalStore.clear(deleteFromFirebase: false);
 
       final casesAfterClear = await LocalStore.all(syncWithFirebase: false);

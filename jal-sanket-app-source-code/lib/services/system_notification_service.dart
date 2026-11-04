@@ -7,6 +7,25 @@ class SystemNotificationService {
   static const MethodChannel _channel =
       MethodChannel('com.example.jal_sanket_2/system_notifications');
 
+  /// Requests runtime notification permission on Android 13+ (API 33+)
+  static Future<void> requestNotificationPermission() async {
+    try {
+      await _channel.invokeMethod('requestNotificationPermission');
+    } catch (e) {
+      debugPrint('SystemNotificationService.requestNotificationPermission error: $e');
+    }
+  }
+
+  /// Checks if system notifications are currently enabled
+  static Future<bool> areNotificationsEnabled() async {
+    try {
+      final res = await _channel.invokeMethod('areNotificationsEnabled');
+      return res == true;
+    } catch (_) {
+      return true;
+    }
+  }
+
   /// Displays an alert in Android's notification shade with high priority, sound and vibration.
   /// Automatically dismisses from the notification panel after [autoDismissSeconds] (default: 30 seconds).
   static Future<void> showIotAlertNotification({
@@ -39,3 +58,4 @@ class SystemNotificationService {
     } catch (_) {}
   }
 }
+

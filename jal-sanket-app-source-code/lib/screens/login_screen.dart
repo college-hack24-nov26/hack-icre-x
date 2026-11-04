@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/firebase_service.dart';
+import '../services/system_notification_service.dart';
 import '../services/app_translations.dart';
 import 'dashboard_screen.dart';
 
@@ -166,6 +167,7 @@ class _LoginScreenState extends State<LoginScreen>
     _loadSavedUsers();
     // Seed and sync initial Firebase database staff & clinical data
     FirebaseService.instance.seedInitialDataIfNeeded();
+    SystemNotificationService.requestNotificationPermission();
 
     _bubbleCtrl = AnimationController(
       vsync: this,

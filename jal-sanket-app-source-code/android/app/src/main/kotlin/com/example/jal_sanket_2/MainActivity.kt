@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -20,6 +21,14 @@ class MainActivity : FlutterActivity() {
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
+                "requestNotificationPermission" -> {
+                    requestNotificationPermission()
+                    result.success(true)
+                }
+                "areNotificationsEnabled" -> {
+                    val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    result.success(manager.areNotificationsEnabled())
+                }
                 "showSystemNotification" -> {
                     val id = call.argument<Int>("id") ?: 1001
                     val title = call.argument<String>("title") ?: "JalSanket Alert"
@@ -34,6 +43,14 @@ class MainActivity : FlutterActivity() {
                     result.success(true)
                 }
                 else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
             }
         }
     }

@@ -525,20 +525,12 @@ class FirebaseService {
         await saveUser(u);
       }
 
-      // Seed initial high-priority cases from LocalStore
-      final demoCases = LocalStore.initialDemoCases;
-      for (final c in demoCases) {
-        // Ensure both demo cases are forwarded to Doctor so Doctor triage has immediate data
-        final fwdCase = c.copyWith(
-          isForwardedToDoctor: true,
-          doctorStatus: c.doctorStatus == 'reviewed' ? 'reviewed' : 'pending',
-          priority: c.severityFlag ? 'urgent' : 'normal',
-        );
-        await saveVoiceCase(fwdCase, ashaId: 'ASHA-402', ashaName: 'Sunita Kamble');
-      }
+      // Purge any legacy seed cases from RTDB
+      await deleteVoiceCase('case-seed-1');
+      await deleteVoiceCase('case-seed-2');
 
       await prefs.setBool('firebase_seeded_v3', true);
-      debugPrint('Firebase initial data seeded successfully (v3 with doctor sync).');
+      debugPrint('Firebase initial staff seeded and seed cases cleaned up.');
     } catch (e) {
       debugPrint('seedInitialDataIfNeeded error: $e');
     }
