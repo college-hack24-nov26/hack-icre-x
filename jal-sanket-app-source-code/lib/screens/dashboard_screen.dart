@@ -23,6 +23,8 @@ import 'settings_screen.dart';
 import 'scan_qr_screen.dart';
 import '../services/esp32_node_service.dart';
 import '../widgets/app_sidebar.dart';
+import '../services/system_notification_service.dart';
+import '../services/alert_history_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String userName;
@@ -57,6 +59,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Timer? _iotPeriodicCheckTimer;
   int _iotAlertSecondsLeft = 30;
   String? _lastDismissedAlertId;
+  int _alertHistoryCount = 0;
   double? _wxTemp;
   double? _wxRain;
   double? _wxWind;
@@ -111,6 +114,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (widget.userRole == 'Jalrakshak' || widget.userRole == 'Citizen') {
       _startIotMismatchMonitoring();
     }
+    AlertHistoryService.getHistory().then((h) { if (mounted) setState(() => _alertHistoryCount = h.length); });
     _wxTimer = Timer.periodic(const Duration(seconds: 60), (_) => _fetchDashboardWeather(lat: _currentLat, lon: _currentLon));
   }
 
@@ -1038,11 +1042,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _buildSquareIconButton(
                 icon: Icons.notifications_none_rounded,
                 iconColor: const Color(0xFF072146),
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('1 New Water Quality Alert')),
-                  );
-                },
+                onTap: _showAlertHistorySheet,
               ),
               Positioned(
                 top: -3,
@@ -1054,9 +1054,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 1.5),
                   ),
-                  child: const Text(
-                    '1',
-                    style: TextStyle(
+                  child: Text(
+                    '${_alertHistoryCount > 0 ? _alertHistoryCount : 1}',
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 9,
                       fontWeight: FontWeight.bold,
@@ -2292,7 +2292,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() {
       _activeIotAlert = alert;
       _iotAlertSecondsLeft = 30;
+      _alertHistoryCount++;
     });
+
+    // 1. Post directly to Android Mobile System Notification Panel (Status bar & Shade)
+    SystemNotificationService.showIotAlertNotification(
+      id: 2026,
+      title: alert.title,
+      body: '${alert.parameter}: ${alert.currentValue.toStringAsFixed(1)} ${alert.unit} (मर्यादा: ${alert.threshold.toInt()} ${alert.unit}) • ${alert.recommendation}',
+      autoDismissSeconds: 30,
+    );
+
+    // 2. Persist in Alert History (Local SharedPreferences + Firebase RTDB)
+    AlertHistoryService.recordAlert(alert, role: widget.userRole);
 
     if (showNotification && mounted) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -2351,6 +2363,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _dismissIotAlert() {
     _iotAlertCountdownTimer?.cancel();
+    SystemNotificationService.cancelNotification(2026);
     setState(() {
       if (_activeIotAlert != null) {
         _lastDismissedAlertId = _activeIotAlert!.id;
@@ -2626,6 +2639,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      onPressed: _showAlertHistorySheet,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF0F1E36),
+                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      icon: const Icon(Icons.history_rounded, size: 14),
+                      label: Text(
+                        _selectedLanguage == 'English' ? 'History' : (_selectedLanguage == 'हिंदी' ? 'इतिहास' : 'इतिहास'),
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     OutlinedButton(
                       onPressed: _dismissIotAlert,
                       style: OutlinedButton.styleFrom(
@@ -2646,6 +2674,205 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showAlertHistorySheet() async {
+    final history = await AlertHistoryService.getHistory();
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.72,
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEE2E2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.history_rounded, color: Color(0xFFDC2626), size: 22),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _selectedLanguage == 'English'
+                                  ? 'IoT Sensor Alert History'
+                                  : (_selectedLanguage == 'हिंदी'
+                                      ? 'आईओटी सेंसर अलर्ट इतिहास'
+                                      : 'IoT सेन्सर अलर्ट इतिहास'),
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F1E36)),
+                            ),
+                            Text(
+                              '${history.length} ${_selectedLanguage == 'English' ? 'recorded alerts' : 'नोंदवलेले इशारे'}',
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (history.isNotEmpty)
+                        TextButton.icon(
+                          onPressed: () async {
+                            await AlertHistoryService.clearHistory();
+                            setModalState(() {
+                              history.clear();
+                            });
+                            if (mounted) {
+                              setState(() => _alertHistoryCount = 0);
+                            }
+                          },
+                          icon: const Icon(Icons.delete_sweep_rounded, size: 16, color: Color(0xFFDC2626)),
+                          label: Text(
+                            _selectedLanguage == 'English' ? 'Clear' : 'पुसा',
+                            style: const TextStyle(fontSize: 12, color: Color(0xFFDC2626)),
+                          ),
+                        ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(modalCtx),
+                        icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 20),
+
+                  // History list
+                  Expanded(
+                    child: history.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.notifications_off_outlined, size: 48, color: Color(0xFFCBD5E1)),
+                                const SizedBox(height: 10),
+                                Text(
+                                  _selectedLanguage == 'English'
+                                      ? 'No alert history recorded yet'
+                                      : 'अद्याप कोणताही अलर्ट इतिहास नाही',
+                                  style: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: history.length,
+                            separatorBuilder: (_, _) => const SizedBox(height: 10),
+                            itemBuilder: (c, idx) {
+                              final item = history[idx];
+                              final timeStr = '${item.timestamp.hour.toString().padLeft(2, '0')}:${item.timestamp.minute.toString().padLeft(2, '0')} • ${item.timestamp.day}/${item.timestamp.month}';
+                              return Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFEE2E2),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            item.parameter,
+                                            style: const TextStyle(
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFFDC2626),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            item.title,
+                                            style: const TextStyle(
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF0F1E36),
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        Text(
+                                          timeStr,
+                                          style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'वाचन: ${item.currentValue.toStringAsFixed(1)} ${item.unit}',
+                                          style: const TextStyle(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFFDC2626),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '|  मर्यादा: ${item.threshold.toInt()} ${item.unit}',
+                                          style: const TextStyle(fontSize: 11, color: Color(0xFF15803D)),
+                                        ),
+                                        const Spacer(),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFDCFCE7),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            item.role,
+                                            style: const TextStyle(fontSize: 9.5, color: Color(0xFF15803D), fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (item.recommendation.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        item.recommendation,
+                                        style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B)),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

@@ -272,6 +272,46 @@ class FirebaseService {
     }
   }
 
+  /// Save an IoT mismatch alert to Firebase alert history: /IOT_ALERTS_HISTORY/{id}.json
+  Future<bool> saveAlertHistory(Map<String, dynamic> item) async {
+    final rawId = item['id']?.toString() ?? 'alert-${DateTime.now().millisecondsSinceEpoch}';
+    final key = _sanitizeKey(rawId);
+    try {
+      final url = Uri.parse('$databaseBaseUrl/IOT_ALERTS_HISTORY/$key.json');
+      final res = await _client.put(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(item),
+      ).timeout(const Duration(seconds: 4));
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('FirebaseService.saveAlertHistory error: $e');
+      return false;
+    }
+  }
+
+  /// Fetch IoT alert history records from Firebase: /IOT_ALERTS_HISTORY.json
+  Future<List<Map<String, dynamic>>> fetchAlertHistory() async {
+    try {
+      final url = Uri.parse('$databaseBaseUrl/IOT_ALERTS_HISTORY.json');
+      final res = await _client.get(url).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200 && res.body.isNotEmpty && res.body != 'null') {
+        final decoded = jsonDecode(res.body);
+        if (decoded is Map) {
+          final List<Map<String, dynamic>> list = [];
+          decoded.forEach((k, v) {
+            if (v is Map) list.add(Map<String, dynamic>.from(v));
+          });
+          list.sort((a, b) => (b['timestamp'] ?? '').compareTo(a['timestamp'] ?? ''));
+          return list;
+        }
+      }
+    } catch (e) {
+      debugPrint('FirebaseService.fetchAlertHistory error: $e');
+    }
+    return [];
+  }
+
   /// Save signed clinical consult note: /doctor_consult_notes/{sessionId}.json
   Future<bool> saveConsultNote(
     SignedConsultNote note, {
