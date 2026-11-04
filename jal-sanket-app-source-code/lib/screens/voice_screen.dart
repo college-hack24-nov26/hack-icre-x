@@ -3006,9 +3006,13 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
             const SizedBox(width: 8),
             InkWell(
               onTap: () async {
-                await LocalStore.clear();
-                await _loadSavedCases();
-                _showToast(_isMr ? 'सर्व नोंदी हटवल्या' : 'All cases cleared');
+                await LocalStore.clear(deleteFromFirebase: true);
+                if (mounted) {
+                  setState(() {
+                    _savedCases = [];
+                  });
+                }
+                _showToast(_isMr ? 'सर्व नोंदी हटवल्या!' : 'All cases cleared!');
               },
               child: Padding(
                 padding: const EdgeInsets.all(4.0),
@@ -3313,6 +3317,26 @@ class _VoiceScreenState extends State<VoiceScreen> with SingleTickerProviderStat
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          await LocalStore.deleteCase(r.id, deleteFromFirebase: true);
+                          if (mounted) {
+                            setState(() {
+                              _savedCases.removeWhere((c) => c.id == r.id);
+                            });
+                          }
+                          _showToast(_isMr ? 'केस हटवली गेली!' : 'Case removed!');
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFE11D48),
+                          side: const BorderSide(color: Color(0xFFFECDD3)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        ),
+                        icon: const Icon(Icons.delete_outline_rounded, size: 13, color: Color(0xFFE11D48)),
+                        label: Text(_isMr ? 'हटवा' : 'Remove', style: const TextStyle(fontSize: 11)),
+                      ),
+                      const SizedBox(width: 6),
                       if (widget.userRole == 'Medical Officer' && r.isForwardedToDoctor) ...[
                         ElevatedButton.icon(
                           onPressed: () => _openDoctorConsult(r.transcript, fromCase: r),

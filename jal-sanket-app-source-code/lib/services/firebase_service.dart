@@ -247,6 +247,31 @@ class FirebaseService {
     }
   }
 
+  /// Delete a single voice case from Firebase: DELETE /voice_cases/{caseId}.json
+  Future<bool> deleteVoiceCase(String caseId) async {
+    final key = _sanitizeKey(caseId);
+    try {
+      final url = Uri.parse('$databaseBaseUrl/voice_cases/$key.json');
+      final res = await _client.delete(url).timeout(const Duration(seconds: 4));
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('FirebaseService.deleteVoiceCase error: $e');
+      return false;
+    }
+  }
+
+  /// Clear all voice cases from Firebase: DELETE /voice_cases.json
+  Future<bool> clearAllVoiceCases() async {
+    try {
+      final url = Uri.parse('$databaseBaseUrl/voice_cases.json');
+      final res = await _client.delete(url).timeout(const Duration(seconds: 4));
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('FirebaseService.clearAllVoiceCases error: $e');
+      return false;
+    }
+  }
+
   /// Save signed clinical consult note: /doctor_consult_notes/{sessionId}.json
   Future<bool> saveConsultNote(
     SignedConsultNote note, {

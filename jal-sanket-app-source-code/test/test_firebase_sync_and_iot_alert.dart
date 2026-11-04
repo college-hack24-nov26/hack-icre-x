@@ -81,6 +81,24 @@ void main() {
       expect(reviewedCase.doctorName, equals('Dr. Patil'));
       expect(reviewedCase.doctorAssessment, contains('गॅस्ट्रोएन्टेरिटिस'));
     });
+
+    test('LocalStore.deleteCase removes individual case cleanly', () async {
+      final casesBefore = await LocalStore.all(syncWithFirebase: false);
+      expect(casesBefore.isNotEmpty, isTrue);
+
+      final toDeleteId = casesBefore.first.id;
+      await LocalStore.deleteCase(toDeleteId, deleteFromFirebase: false);
+
+      final casesAfter = await LocalStore.all(syncWithFirebase: false);
+      expect(casesAfter.any((c) => c.id == toDeleteId), isFalse);
+    });
+
+    test('LocalStore.clear wipes all cases completely', () async {
+      await LocalStore.clear(deleteFromFirebase: false);
+
+      final casesAfterClear = await LocalStore.all(syncWithFirebase: false);
+      expect(casesAfterClear.isEmpty, isTrue);
+    });
   });
 
   group('IoT Sensor Value Mismatch & Role Restriction Tests', () {
@@ -120,3 +138,4 @@ void main() {
     });
   });
 }
+

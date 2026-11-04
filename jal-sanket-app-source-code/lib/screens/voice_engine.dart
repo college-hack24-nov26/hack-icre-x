@@ -1395,7 +1395,7 @@ class LocalStore {
     try {
       final prefs = await SharedPreferences.getInstance();
       final seeded = prefs.getBool(seededKey) ?? false;
-      if (!seeded || !prefs.containsKey(casesKey)) {
+      if (!seeded) {
         final listJson = jsonEncode(_initialDemoCases.map((e) => e.toJson()).toList());
         await prefs.setString(casesKey, listJson);
         await prefs.setString(
@@ -1432,10 +1432,11 @@ class LocalStore {
           return row;
         }).toList();
       } else {
-        localCases = List.from(_initialDemoCases);
+        final seeded = prefs.getBool(seededKey) ?? false;
+        localCases = seeded ? [] : List.from(_initialDemoCases);
       }
     } catch (_) {
-      localCases = List.from(_initialDemoCases);
+      localCases = [];
     }
 
     if (syncWithFirebase) {
@@ -1646,12 +1647,40 @@ class LocalStore {
     }
   }
 
-  static Future<void> clear() async {
+  /// Delete a single case from local storage and Firebase
+  static Future<void> deleteCase(String caseId, {bool deleteFromFirebase = true}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cases = await all(syncWithFirebase: false);
+      cases.removeWhere((c) => c.id == caseId);
+      await prefs.setString(casesKey, jsonEncode(cases.map((e) => e.toJson()).toList()));
+    } catch (_) {}
+
+    if (deleteFromFirebase) {
+      try {
+        await FirebaseService.instance.deleteVoiceCase(caseId);
+      } catch (e) {
+        debugPrint('LocalStore.deleteCase Firebase error: $e');
+      }
+    }
+  }
+
+  /// Clear all cases from local storage and Firebase Realtime Database
+  static Future<void> clear({bool deleteFromFirebase = true}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(casesKey, jsonEncode([]));
       await prefs.setString(identKey, jsonEncode({}));
+      await prefs.setBool(seededKey, true); // Keep true so ensureSeeded won't re-seed demo cases
     } catch (_) {}
+
+    if (deleteFromFirebase) {
+      try {
+        await FirebaseService.instance.clearAllVoiceCases();
+      } catch (e) {
+        debugPrint('LocalStore.clear Firebase error: $e');
+      }
+    }
   }
 
   static Future<void> restoreDemoCases() async {
@@ -1659,6 +1688,10 @@ class LocalStore {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(seededKey);
       await ensureSeeded();
+      final demoCases = List<SavedCaseRow>.from(_initialDemoCases);
+      for (final c in demoCases) {
+        await FirebaseService.instance.saveVoiceCase(c, ashaId: 'ASHA-402', ashaName: 'Sunita Kamble');
+      }
     } catch (_) {}
   }
 
